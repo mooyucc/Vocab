@@ -1,0 +1,176 @@
+/* 
+  Localizable.strings (English)
+  Vocab
+  
+  Created by 徐化军 on 2026/1/14.
+*/
+
+// MARK: - Common
+"settings" = "Settings";
+"done" = "Done";
+"cancel" = "Cancel";
+"confirm" = "Confirm";
+"save" = "Save";
+"delete" = "Delete";
+"ok" = "OK";
+"yes" = "Yes";
+"no" = "No";
+"close" = "Close";
+"loading" = "Loading";
+"retry" = "Retry";
+
+// MARK: - Tab Bar
+"tab_progress" = "Progress";
+"tab_study" = "Study";
+"tab_word_list" = "Word List";
+
+// MARK: - Home
+"good_morning" = "Good morning, ";
+"good_afternoon" = "Good afternoon, ";
+"good_evening" = "Good evening, ";
+"total_progress" = "Total Progress";
+"mastered" = "Mastered";
+"to_learn" = "To Learn";
+"start_review" = "Start Review";
+"add_new_word" = "Add New Word";
+"recently_added" = "Recently Added";
+"view_all" = "View All";
+"no_words_yet" = "No Words Yet";
+"go_add_words" = "Go add some words to start learning!";
+"daily_motivation" = "Stay motivated and learn vocabulary today 💪";
+"words_to_review" = " words to review";
+"ai_smart_fill" = "AI Smart Fill";
+
+// MARK: - Settings
+"account" = "Account";
+"general" = "General";
+"data" = "Data";
+"app" = "App";
+"about" = "About";
+"help" = "Help & Support";
+"sign_out" = "Sign Out";
+"sign_out_confirm" = "Are you sure you want to sign out? You will need to sign in again to sync data.";
+"language" = "Language";
+"appearance" = "Appearance";
+"appearance_description" = "Choose the app's appearance mode. Follow system will automatically switch based on system settings.";
+"language_description" = "Choose the display language for the app interface";
+
+// MARK: - Add Word
+"word" = "Word";
+"definition" = "Definition";
+"part_of_speech" = "Part of Speech & Pronunciation";
+"pronunciation" = "Pronunciation";
+"example" = "Example";
+"translation" = "Translation";
+"word_sheet" = "Word Sheet";
+"word_sheet_description" = "Choose the group to add the word to. Default uses today's date.";
+"save_word" = "Save Word";
+"add_new_word_title" = "Add New Word";
+"ai_fill" = "AI Fill";
+"camera_recognize" = "Camera Recognize";
+"ai_generate_failed" = "AI Generation Failed";
+"select_recognition_region" = "Select Recognition Region";
+"recognize_full_image" = "Recognize Full";
+"recognize_selected_region" = "Recognize Selected";
+
+// MARK: - Study
+"focus_mode" = "Focus Mode";
+"recommended_review" = "Recommended Review";
+"recommended_review_description" = "Intelligently recommend words to review from all word banks based on Ebbinghaus forgetting curve";
+"recommended_review_completed" = "Recommended review completed\nGo add some new words!";
+"review_all" = "Review All";
+"review_all_description" = "Review all remembered and forgotten words again";
+"continue_last" = "Continue Last";
+"continue_last_description" = "Review forgotten and unreviewed words";
+"forgot" = "Forgot";
+"remembered" = "Remembered";
+"daily_goal" = "Daily Goal";
+"click_to_flip" = "Tap to flip and see definition";
+"question" = "Question";
+"answer" = "Answer";
+"ai_update_example" = "AI Update Example";
+"review_prompt" = "Review Prompt";
+"review_again" = "Review Again";
+"later" = "Later";
+"all_words_reviewed" = "Great! All words reviewed\nGo add some new words!";
+"today_words_reviewed" = "Great! Today's words completed\nGo add some new words!";
+"go_add_new_words" = "Go add some new words!";
+"round_complete" = "Round Complete";
+"words_need_review" = " words need review";
+"select_word_sheet" = "Select Word Sheet";
+"all_sheets" = "All Sheets";
+"play_pronunciation" = "Play Pronunciation";
+
+// MARK: - Batch Add
+"batch_add_words" = "Batch Add Words";
+"no_words_recognized" = "No Words Recognized";
+"recognized_words" = "Recognized Words";
+"select_all" = "Select All";
+"deselect_all" = "Deselect All";
+"selected_count" = "Selected %d / %d words";
+"adding" = "Adding... (%d/%d)";
+"batch_add" = "Batch Add (%d)";
+"words_need_review" = " words need review";
+"add_failed" = "Add Failed";
+"no_words_recognized_error" = "No words recognized. Please ensure the image contains clear English text.";
+"recognize_failed" = "Recognition failed: %@";
+
+// MARK: - Data Settings
+"local_data" = "Local Data";
+"import_data" = "Import Local Data";
+"export_data" = "Export Local Data";
+"data_backup" = "Import or export local data backup";
+"delete_account" = "Delete Account";
+"delete_account_description" = "Will remove account information and clear all word data on this device.";
+"delete_account_warning" = "After deletion, account information, local word records, backups and images will be permanently deleted and cannot be recovered.";
+"delete_account_confirm" = "Are you sure you want to delete your account and all data? This action cannot be undone.";
+"confirm_delete" = "Confirm Delete";
+"data_exported" = "Data exported successfully";
+"data_imported" = "Data imported successfully";
+"export_success" = "Export Success";
+"import_success" = "Import Success";
+"import_failed" = "Import Failed";
+
+// MARK: - Word List
+"my_word_list" = "My Word List";
+"search_words" = "Search words...";
+"no_results" = "No Results";
+"try_other_keywords" = "Try using other keywords to search";
+
+// MARK: - About
+"version" = "Version %@";
+"features" = "Features";
+"updates" = "Updates";
+"core_features" = "Core Features";
+"version_history" = "Version History";
+
+// MARK: - Errors
+"unknown_error" = "Unknown Error";
+"invalid_image" = "Invalid Image";
+"recognition_failed" = "Text recognition failed: %@";
+"processing_failed" = "Image processing failed: %@";
+
+// MARK: - Paywall
+"paywall_title" = "Upgrade to Pro";
+"paywall_subtitle" = "Unlock more premium features and enhance your learning experience";
+"paywall_feature_title" = "Pro Features";
+"paywall_feature_ai" = "AI-Powered Learning Assistant";
+"paywall_feature_import_export" = "Advanced Data Import & Export";
+"paywall_button_restore" = "Restore Purchases";
+"paywall_current_subscription" = "Current Subscription";
+"paywall_expires_on" = "Expires on: ";
+"paywall_lifetime_unlocked" = "Lifetime Membership Unlocked";
+"paywall_lifetime_sync_hint" = "You have access to all Pro features permanently";
+"subscription_auto_renew_note" = "Subscriptions will auto-renew and can be cancelled in account settings";
+"subscription_monthly" = "Monthly";
+"subscription_yearly" = "Yearly";
+"subscription_weekly" = "Weekly";
+"subscription_daily" = "Daily";
+"subscription_default" = "Subscription";
+"one_time_purchase" = "One-time Purchase";
+"terms_of_use" = "Terms of Use";
+"privacy_policy" = "Privacy Policy";
+"terms_url" = "https://example.com/terms";
+"privacy_url" = "https://example.com/privacy";
+"onboarding_complete" = "Get Started";
+"membership_status_lifetime_active" = "Lifetime Active";

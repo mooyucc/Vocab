@@ -1,0 +1,176 @@
+/* 
+  Localizable.strings (简体中文)
+  Vocab
+  
+  Created by 徐化军 on 2026/1/14.
+*/
+
+// MARK: - Common
+"settings" = "设置";
+"done" = "完成";
+"cancel" = "取消";
+"confirm" = "确认";
+"save" = "保存";
+"delete" = "删除";
+"ok" = "确定";
+"yes" = "是";
+"no" = "否";
+"close" = "关闭";
+"loading" = "加载中";
+"retry" = "重试";
+
+// MARK: - Tab Bar
+"tab_progress" = "进度";
+"tab_study" = "背词";
+"tab_word_list" = "词库";
+
+// MARK: - Home
+"good_morning" = "早安，";
+"good_afternoon" = "午安，";
+"good_evening" = "晚安，";
+"total_progress" = "总进度";
+"mastered" = "已掌握";
+"to_learn" = "待学习";
+"start_review" = "开始复习";
+"add_new_word" = "添加新词";
+"recently_added" = "最近添加";
+"view_all" = "查看全部";
+"no_words_yet" = "还没有单词";
+"go_add_words" = "快去添加一些单词开始学习吧！";
+"daily_motivation" = "今天也要元气满满背单词 💪";
+"words_to_review" = "个单词待复习";
+"ai_smart_fill" = "AI 智能辅助录入";
+
+// MARK: - Settings
+"account" = "账户";
+"general" = "通用";
+"data" = "数据";
+"app" = "应用";
+"about" = "关于";
+"help" = "帮助与支持";
+"sign_out" = "退出登录";
+"sign_out_confirm" = "确定要退出登录吗？退出后需要重新登录才能同步数据。";
+"language" = "语言";
+"appearance" = "外观模式";
+"appearance_description" = "选择应用的外观模式,跟随系统将根据系统设置自动切换";
+"language_description" = "选择应用界面的显示语言";
+
+// MARK: - Add Word
+"word" = "单词";
+"definition" = "释义";
+"part_of_speech" = "词性和音标";
+"pronunciation" = "音标";
+"example" = "例句";
+"translation" = "翻译";
+"word_sheet" = "词库分组";
+"word_sheet_description" = "选择将单词添加到的分组，默认使用今天的日期";
+"save_word" = "保存单词";
+"add_new_word_title" = "添加新词";
+"ai_fill" = "AI 填充";
+"camera_recognize" = "拍照识别单词";
+"ai_generate_failed" = "AI 生成失败";
+"select_recognition_region" = "选择识别区域";
+"recognize_full_image" = "识别整张";
+"recognize_selected_region" = "识别选中区域";
+
+// MARK: - Study
+"focus_mode" = "专注模式";
+"recommended_review" = "推荐复习";
+"recommended_review_description" = "根据艾宾浩斯遗忘曲线，从全部词库中智能推荐需要复习的单词";
+"recommended_review_completed" = "推荐复习完成\n去添加一些新词吧";
+"review_all" = "复习全部";
+"review_all_description" = "将记住的、忘记的单词全部再来一遍";
+"continue_last" = "接着上次复习";
+"continue_last_description" = "复习忘记的和还没有复习过的单词";
+"forgot" = "忘记了";
+"remembered" = "记住了";
+"daily_goal" = "每日目标";
+"click_to_flip" = "点击翻转查看释义";
+"question" = "问题";
+"answer" = "答案";
+"ai_update_example" = "Ai 更新例句";
+"review_prompt" = "复习提示";
+"review_again" = "再复习一遍";
+"later" = "稍后再说";
+"all_words_reviewed" = "所有单词都复习完了\n去添加一些新词吧";
+"today_words_reviewed" = "今天的单词都背完了\n去添加一些新词吧";
+"go_add_new_words" = "去添加一些新词吧";
+"round_complete" = "一轮完成";
+"words_need_review" = "个单词需要复习";
+"select_word_sheet" = "选择词库分组";
+"all_sheets" = "全部词库";
+"play_pronunciation" = "播放读音";
+
+// MARK: - Batch Add
+"batch_add_words" = "批量添加单词";
+"no_words_recognized" = "未识别到单词";
+"recognized_words" = "识别到的单词";
+"select_all" = "全选";
+"deselect_all" = "取消全选";
+"selected_count" = "已选择 %d / %d 个单词";
+"adding" = "正在添加... (%d/%d)";
+"batch_add" = "批量添加 (%d)";
+"words_need_review" = "个单词需要复习";
+"add_failed" = "添加失败";
+"no_words_recognized_error" = "未识别到任何单词，请确保图片中包含清晰的英文文字";
+"recognize_failed" = "识别失败: %@";
+
+// MARK: - Data Settings
+"local_data" = "本地数据";
+"import_data" = "导入本地数据";
+"export_data" = "导出本地数据";
+"data_backup" = "导入或导出本地数据备份";
+"delete_account" = "删除账户";
+"delete_account_description" = "将移除账户信息并清空此设备的所有单词数据。";
+"delete_account_warning" = "删除后，账户资料、本地单词记录、备份与图片都会被彻底清除，且无法恢复。";
+"delete_account_confirm" = "您确定要删除账户和所有数据吗？此操作无法撤销。";
+"confirm_delete" = "确认删除";
+"data_exported" = "数据已成功导出";
+"data_imported" = "数据已成功导入";
+"export_success" = "导出成功";
+"import_success" = "导入成功";
+"import_failed" = "导入失败";
+
+// MARK: - Word List
+"my_word_list" = "我的词库";
+"search_words" = "搜索单词...";
+"no_results" = "未找到结果";
+"try_other_keywords" = "尝试使用其他关键词搜索";
+
+// MARK: - About
+"version" = "版本 %@";
+"features" = "功能介绍";
+"updates" = "版本更新";
+"core_features" = "核心功能";
+"version_history" = "版本历史";
+
+// MARK: - Errors
+"unknown_error" = "未知错误";
+"invalid_image" = "无效的图片";
+"recognition_failed" = "文字识别失败: %@";
+"processing_failed" = "图片处理失败: %@";
+
+// MARK: - Paywall
+"paywall_title" = "升级到 Pro";
+"paywall_subtitle" = "解锁更多高级功能，提升学习体验";
+"paywall_feature_title" = "Pro 功能";
+"paywall_feature_ai" = "AI 智能辅助学习";
+"paywall_feature_import_export" = "高级数据导入导出";
+"paywall_button_restore" = "恢复购买";
+"paywall_current_subscription" = "当前订阅";
+"paywall_expires_on" = "到期时间：";
+"paywall_lifetime_unlocked" = "已解锁终身会员";
+"paywall_lifetime_sync_hint" = "您已拥有所有 Pro 功能，可永久使用";
+"subscription_auto_renew_note" = "订阅将自动续订，可在账户设置中取消";
+"subscription_monthly" = "月度订阅";
+"subscription_yearly" = "年度订阅";
+"subscription_weekly" = "周订阅";
+"subscription_daily" = "日订阅";
+"subscription_default" = "订阅";
+"one_time_purchase" = "一次性购买";
+"terms_of_use" = "使用条款";
+"privacy_policy" = "隐私政策";
+"terms_url" = "https://example.com/terms";
+"privacy_url" = "https://example.com/privacy";
+"onboarding_complete" = "开始使用";
+"membership_status_lifetime_active" = "终身有效";
