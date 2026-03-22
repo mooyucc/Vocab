@@ -17,6 +17,7 @@ struct WordListView: View {
     @State private var searchText: String = ""
     @State private var showAddWord = false
     @State private var expandedSheetIds: Set<UUID> = []
+    @State private var selectedWord: Word?
     
     private var filteredWords: [Word] {
         if searchText.isEmpty {
@@ -29,10 +30,23 @@ struct WordListView: View {
         }
     }
     
-    private var sheetsWithWords: [WordSheet] {
-        allSheets.filter { sheet in
-            words.contains { $0.sheet?.id == sheet.id }
+    /// 按 sheet.id 分组的单词，避免在 body 中重复 O(sheets×words) 的 filter 导致卡顿
+    private var wordsBySheetId: [UUID: [Word]] {
+        var result: [UUID: [Word]] = [:]
+        for word in words {
+            guard let sheetId = word.sheet?.id else { continue }
+            result[sheetId, default: []].append(word)
         }
+        return result
+    }
+    
+    private var sheetsWithWords: [WordSheet] {
+        let idsWithWords = Set(wordsBySheetId.keys)
+        return allSheets.filter { idsWithWords.contains($0.id) }
+    }
+    
+    private func words(for sheet: WordSheet) -> [Word] {
+        wordsBySheetId[sheet.id] ?? []
     }
     
     var body: some View {
@@ -92,7 +106,7 @@ struct WordListView: View {
                                 ForEach(sheetsWithWords) { sheet in
                                     SheetSection(
                                         sheet: sheet,
-                                        words: words.filter { $0.sheet?.id == sheet.id },
+                                        words: words(for: sheet),
                                         isExpanded: expandedSheetIds.contains(sheet.id),
                                         onToggle: {
                                             if expandedSheetIds.contains(sheet.id) {
@@ -103,6 +117,9 @@ struct WordListView: View {
                                         },
                                         onDelete: { word in
                                             deleteWord(word)
+                                        },
+                                        onWordTap: { word in
+                                            selectedWord = word
                                         }
                                     )
                                 }
@@ -111,6 +128,8 @@ struct WordListView: View {
                                 ForEach(filteredWords) { word in
                                     WordRow(word: word, onDelete: {
                                         deleteWord(word)
+                                    }, onTap: {
+                                        selectedWord = word
                                     })
                                 }
                             }
@@ -131,7 +150,7 @@ struct WordListView: View {
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
                     .frame(width: 56, height: 56)
-                    .background(.tint, in: Circle())
+                    .background(LinearGradient.vocabBrandProgress, in: Circle())
                     .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
             .buttonStyle(.plain)
@@ -141,6 +160,23 @@ struct WordListView: View {
         .background(Color(.systemGroupedBackground))
         .sheet(isPresented: $showAddWord) {
             AddWordView()
+        }
+        .sheet(item: $selectedWord) { word in
+            NavigationView {
+                FlashCardView(word: word, onResult: { _ in
+                    // 在词库查看模式下，不进行任何操作，仅关闭弹窗
+                    selectedWord = nil
+                }, showActionButtons: false)
+                .padding(.horizontal, 20)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(LocalizedKey.done.rawValue.localized) {
+                            selectedWord = nil
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -155,6 +191,7 @@ struct SheetSection: View {
     let isExpanded: Bool
     let onToggle: () -> Void
     let onDelete: (Word) -> Void
+    let onWordTap: (Word) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -188,6 +225,8 @@ struct SheetSection: View {
                 ForEach(words) { word in
                     WordRow(word: word, onDelete: {
                         onDelete(word)
+                    }, onTap: {
+                        onWordTap(word)
                     })
                 }
             }
@@ -198,27 +237,59 @@ struct SheetSection: View {
 struct WordRow: View {
     let word: Word
     let onDelete: () -> Void
+    let onTap: () -> Void
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(word.term)
-                        .font(.headline)
-                    Text(word.partOfSpeech)
-                        .font(.caption)
-                        .fontDesign(.serif)
-                        .foregroundStyle(.secondary)
-                        .italic()
+            // 主要内容区域，可点击
+            Button(action: onTap) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(word.term)
+                                .font(.headline)
+                            Text(word.partOfSpeech)
+                                .font(.caption)
+                                .fontDesign(.serif)
+                                .foregroundStyle(.secondary)
+                                .italic()
+                        }
+                        
+                        Text(word.definition)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    // 背诵标记（与英文单词垂直居中对齐）
+                    if word.learned {
+                        // 绿色圆形图标，里面有白色对勾
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.system(size: 16))
+                            .frame(width: 16, height: 16)
+                            .frame(height: 20, alignment: .center)
+                            .alignmentGuide(.top) { d in
+                                // 与英文单词行的中心对齐（headline 字体高度约为 20-22pt）
+                                d[.top] + 10 - d.height / 2
+                            }
+                    } else {
+                        // 橙色实心圆点
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 16, height: 16)
+                            .frame(height: 20, alignment: .center)
+                            .alignmentGuide(.top) { d in
+                                // 与英文单词行的中心对齐（headline 字体高度约为 20-22pt）
+                                d[.top] + 10 - d.height / 2
+                            }
+                    }
                 }
-                
-                Text(word.definition)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
             }
+            .buttonStyle(.plain)
             
-            Spacer()
-            
+            // 删除按钮，独立于主要内容
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .foregroundStyle(.secondary)

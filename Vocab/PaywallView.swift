@@ -2,425 +2,256 @@
 //  PaywallView.swift
 //  Vocab
 //
-//  订阅付费墙：展示价值点、价格、购买与恢复入口。
+//  Created by 徐化军 on 2026/1/29.
 //
 
 import SwiftUI
 import StoreKit
 
+private let paywallGradient = LinearGradient(
+    colors: [Color(hex: "FE6A57"), Color(hex: "FE2E69")],
+    startPoint: .topLeading,
+    endPoint: .bottomTrailing
+)
+
 struct PaywallView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var purchaseManager: PurchaseManager
-    @EnvironmentObject private var entitlementManager: EntitlementManager
-    @EnvironmentObject private var brandColorManager: BrandColorManager
-    @Environment(\.colorScheme) private var colorScheme
-
-    @State private var isRestoring: Bool = false
-    @State private var isPurchasing: Set<String> = []
+    @Environment(\.dismiss) var dismiss
+    @StateObject private var purchaseManager = PurchaseManager.shared
+    @StateObject private var usageTracker = UsageTracker.shared
+    @State private var isPurchasing = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     
-    // 引导流程相关
-    var isOnboarding: Bool = false
-    var onSkip: (() -> Void)? = nil
-
     var body: some View {
-        NavigationStack {
+        NavigationView {
             ScrollView {
-                VStack(spacing: 24) {
-                    heroSection
-                    featureList
-                    pricingSection
-                    restoreSection
+                VStack(spacing: 28) {
+                    // 标题区域（带图标）
+                    VStack(spacing: 10) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 36, weight: .medium))
+                            .foregroundStyle(paywallGradient)
+                        
+                        Text("paywall_usage_title".localized)
+                            .font(.title.weight(.bold))
+                        
+                        Text("paywall_usage_subtitle".localized)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                    }
+                    .padding(.top, 16)
                     
-                    // 引导流程中显示"开始使用"按钮
-                    if isOnboarding, let onSkip = onSkip {
-                        skipButton(onSkip: onSkip)
+                    // 使用情况卡片（渐变背景）
+                    HStack(spacing: 0) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("usage_remaining".localized)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.white.opacity(0.9))
+                            Text("\(usageTracker.remainingCalls)")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        
+                        Spacer()
+                        
+                        Rectangle()
+                            .fill(.white.opacity(0.3))
+                            .frame(width: 1, height: 40)
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 6) {
+                            Text("usage_total_used".localized)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.white.opacity(0.9))
+                            Text("\(usageTracker.totalCallsUsed)")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(paywallGradient)
+                            .shadow(color: Color(hex: "FE2E69").opacity(0.35), radius: 12, x: 0, y: 6)
+                    )
+                    .padding(.horizontal, 20)
+                    
+                    // 购买选项
+                    if let product = purchaseManager.products.first {
+                        VStack(spacing: 12) {
+                            Text("usage_purchase_title".localized)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                            
+                            PurchaseCard(
+                                product: product,
+                                calls: UsageTracker.callsPerPurchase,
+                                price: UsageTracker.pricePerPurchase
+                            ) {
+                                await purchaseProduct(product)
+                            }
+                            .disabled(isPurchasing)
+                        }
+                    } else if purchaseManager.isLoading {
+                        ProgressView()
+                            .scaleEffect(1.1)
+                            .padding(.vertical, 24)
                     }
                     
-                    termsSection
+                    // 说明与消耗说明（卡片式）
+                    VStack(spacing: 14) {
+                        Text(String(format: "usage_purchase_description".localized, UsageTracker.callsPerPurchase))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Text("usage_purchase_note".localized)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("usage_consumption_info".localized, systemImage: "info.circle.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "text.badge.plus")
+                                    .font(.caption)
+                                    .foregroundStyle(paywallGradient)
+                                Text("usage_consumption_ai_fill".localized)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.caption)
+                                    .foregroundStyle(paywallGradient)
+                                Text("usage_consumption_ai_example".localized)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // 恢复购买
+                    Button {
+                        Task { await purchaseManager.restorePurchases() }
+                    } label: {
+                        Text("paywall_button_restore".localized)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.bottom, 28)
+                    
+                    Spacer(minLength: 24)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
-                .padding(.top, 12)
             }
-            .navigationTitle("paywall_title".localized)
+            .background(Color(.systemGroupedBackground))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // 仅在非引导流程中显示关闭按钮
-                if !isOnboarding {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("close".localized) { dismiss() }
-                    }
-                }
-            }
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color.blue.opacity(0.12),
-                        Color.pink.opacity(0.08),
-                        Color(.systemBackground)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
-            .task {
-                // 每次打开 PaywallView 时重新加载产品列表
-                await purchaseManager.loadProducts()
-            }
-        }
-    }
-
-    // MARK: - Sections
-
-    private var heroSection: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "sparkles.rectangle.stack")
-                .symbolRenderingMode(.hierarchical)
-                .font(.system(size: 48, weight: .semibold))
-                .foregroundStyle(brandColorManager.currentBrandColor)
-
-            Text("paywall_title".localized)
-                .font(.title2.bold())
-                .multilineTextAlignment(.center)
-
-            Text("paywall_subtitle".localized)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
-    }
-
-    private var featureList: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("paywall_feature_title".localized)
-                .font(.headline)
-
-            featureRow(icon: "sparkles", title: "paywall_feature_ai".localized)
-            featureRow(icon: "tray.and.arrow.down.fill", title: "paywall_feature_import_export".localized)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
-    }
-
-    private var pricingSection: some View {
-        VStack(spacing: 12) {
-            if hasLifetime {
-                lifetimeUnlockedCard
-            } else {
-                if purchaseManager.isLoading {
-                    ProgressView("loading".localized)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                } else if purchaseManager.products.isEmpty {
-                    if let message = purchaseManager.errorMessage {
-                        VStack(spacing: 12) {
-                            Text(message)
-                                .font(.footnote)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                            
-                            Button {
-                                Task {
-                                    await purchaseManager.loadProducts()
-                                }
-                            } label: {
-                                Text("retry".localized)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        .padding()
-                    } else {
-                        ProgressView("loading".localized)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    }
-                } else {
-                    // 显示错误信息（如果有）
-                    if let errorMessage = purchaseManager.errorMessage, !errorMessage.isEmpty {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                            .padding(.bottom, 8)
-                    }
-                    
-                    ForEach(sortedProducts(), id: \.id) { product in
-                        purchaseButton(for: product)
-                    }
-                }
-            }
-        }
-    }
-
-    private var restoreSection: some View {
-        Button {
-            Task {
-                isRestoring = true
-                await purchaseManager.restorePurchases()
-                isRestoring = false
-                entitlementManager.updateEntitlement()
-            }
-        } label: {
-            HStack {
-                if isRestoring { ProgressView().scaleEffect(0.8) }
-                Text("paywall_button_restore".localized)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-    }
-    
-    private func skipButton(onSkip: @escaping () -> Void) -> some View {
-        Button {
-            onSkip()
-        } label: {
-            Text("onboarding_complete".localized)
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(brandColorManager.currentBrandColor)
-                )
-        }
-    }
-
-    private var termsSection: some View {
-        VStack(spacing: 6) {
-            Text("subscription_auto_renew_note".localized)
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-
-            HStack(spacing: 4) {
-                Link("terms_of_use".localized, destination: URL(string: "terms_url".localized)!)
-                Text("|")
-                    .foregroundColor(.secondary)
-                Link("privacy_policy".localized, destination: URL(string: "privacy_url".localized)!)
-            }
-            .font(.footnote.weight(.semibold))
-            .foregroundColor(.secondary)
-        }
-        .padding(.top, 4)
-    }
-
-    // MARK: - Helpers
-
-    private func featureRow(icon: String, title: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundColor(brandColorManager.currentBrandColor)
-                .frame(width: 26)
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(.primary)
-            Spacer()
-        }
-    }
-
-    private func purchaseButton(for product: Product) -> some View {
-        let isPurchasingThis = isPurchasing.contains(product.id)
-        let isCurrentSubscription = entitlementManager.currentSubscriptionProductID == product.id && entitlementManager.isSubscriptionActive
-        
-        return Button {
-            guard !isPurchasingThis else { 
-                print("⚠️ 购买进行中，忽略重复点击")
-                return 
-            }
-            
-            // 如果已经是当前订阅，不允许再次购买
-            guard !isCurrentSubscription else {
-                print("ℹ️ 用户已拥有该订阅: \(product.id)，不允许重复购买")
-                return
-            }
-            
-            print("🔄 用户点击购买: \(product.id)")
-            print("🔄 当前订阅状态: isActive=\(entitlementManager.isSubscriptionActive), productID=\(entitlementManager.currentSubscriptionProductID ?? "nil")")
-            
-            // 立即设置购买状态，提供即时反馈
-            isPurchasing.insert(product.id)
-            
-            Task { @MainActor in
-                // 清除之前的错误信息
-                purchaseManager.errorMessage = nil
-                
-                print("🔄 准备调用 purchase()，等待系统弹窗...")
-                // 执行购买
-                let transaction = await purchaseManager.purchase(product)
-                
-                print("🔄 purchase() 返回: transaction=\(transaction != nil ? "有" : "无")")
-                
-                // 如果购买成功，更新权益
-                if let transaction = transaction {
-                    print("🔄 购买成功，基于交易直接更新权益状态...")
-                    
-                    // 使用刚完成的交易直接更新权益
-                    entitlementManager.updateEntitlement(from: transaction)
-                    
-                    // 等待权益更新完成
-                    try? await Task.sleep(nanoseconds: 300_000_000) // 0.3秒
-                    
-                    print("🔄 权益更新完成，当前状态: entitlement=\(entitlementManager.currentEntitlement), isActive=\(entitlementManager.isSubscriptionActive), productID=\(entitlementManager.currentSubscriptionProductID ?? "nil")")
-                    
-                    // 如果权益更新成功，关闭 PaywallView
-                    if entitlementManager.isSubscriptionActive {
-                        print("✅ 订阅已激活，关闭 PaywallView")
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
                         dismiss()
-                    } else {
-                        print("⚠️ 订阅状态未更新，尝试使用标准方法更新...")
-                        // 如果直接更新失败，尝试使用标准方法
-                        entitlementManager.updateEntitlement()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
                     }
                 }
-                
-                // 延迟移除购买状态，确保用户看到反馈
-                if transaction == nil && purchaseManager.errorMessage == nil {
-                    // 用户取消，立即移除状态
-                    print("🔄 用户取消或购买失败，移除购买状态")
-                    isPurchasing.remove(product.id)
-                } else {
-                    // 购买成功或失败，延迟移除状态
-                    print("🔄 延迟移除购买状态...")
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1秒延迟
-                    isPurchasing.remove(product.id)
-                }
             }
-        } label: {
-            HStack {
-                VStack(spacing: 6) {
-                    HStack {
-                        Text(product.displayName)
-                            .font(.headline)
-                        Spacer()
-                        if isCurrentSubscription {
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.subheadline)
-                                Text("paywall_current_subscription".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                            }
-                        } else {
-                            Text(product.displayPrice)
-                                .font(.headline)
-                        }
-                    }
-                    HStack {
-                        Text(subtitle(for: product))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        if isCurrentSubscription {
-                            if let expiryDate = entitlementManager.subscriptionExpiryDate {
-                                Text("paywall_expires_on".localized + formatDate(expiryDate))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            } else {
-                                Text("membership_status_lifetime_active".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                            }
-                        }
-                    }
-                }
-                
-                if isPurchasingThis {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                }
+            .alert("error".localized, isPresented: $showError) {
+                Button("ok".localized, role: .cancel) { }
+            } message: {
+                Text(errorMessage)
             }
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(isCurrentSubscription ? 
-                          Color.green.opacity(colorScheme == .dark ? 0.2 : 0.1) :
-                          brandColorManager.currentBrandColor.opacity(colorScheme == .dark ? 0.25 : 0.15))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isCurrentSubscription ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1.5)
-            )
         }
-        .buttonStyle(.plain)
-        .disabled(isPurchasingThis || isCurrentSubscription)
     }
     
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        formatter.locale = Locale.current
-        return formatter.string(from: date)
-    }
-
-    private func sortedProducts() -> [Product] {
-        purchaseManager.products.sorted { lhs, rhs in
-            lhs.price < rhs.price
-        }
-    }
-
-    private func subtitle(for product: Product) -> String {
-        if product.id == SubscriptionProductID.proLifetime {
-            return "one_time_purchase".localized
-        }
-        if let unit = product.subscription?.subscriptionPeriod.unit {
-            return unit.title
-        }
-        return ""
-    }
-    
-    private var hasLifetime: Bool {
-        entitlementManager.currentEntitlement == .pro && entitlementManager.subscriptionExpiryDate == nil
-    }
-    
-    private var lifetimeUnlockedCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Image(systemName: "checkmark.seal.fill")
-                    .foregroundColor(.green)
-                Text("paywall_lifetime_unlocked".localized)
-                    .font(.headline)
-                    .foregroundColor(.primary)
+    private func purchaseProduct(_ product: Product) async {
+        isPurchasing = true
+        defer { isPurchasing = false }
+        
+        do {
+            let success = try await purchaseManager.purchase(product)
+            if success {
+                dismiss()
             }
-            Text("paywall_lifetime_sync_hint".localized)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
     }
 }
 
-private extension Product.SubscriptionPeriod.Unit {
-    var title: String {
-        switch self {
-        case .month: return "subscription_monthly".localized
-        case .year: return "subscription_yearly".localized
-        case .week: return "subscription_weekly".localized
-        case .day: return "subscription_daily".localized
-        @unknown default: return "subscription_default".localized
+struct PurchaseCard: View {
+    let product: Product
+    let calls: Int
+    let price: Double
+    let onPurchase: () async -> Void
+    
+    @State private var isPurchasing = false
+    
+    var body: some View {
+        Button {
+            Task {
+                isPurchasing = true
+                await onPurchase()
+                isPurchasing = false
+            }
+        } label: {
+            HStack(spacing: 16) {
+                Image(systemName: "bolt.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(paywallGradient)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(format: "usage_purchase_calls".localized, calls))
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    
+                    Text(product.displayPrice.isEmpty ? String(format: "usage_price_format".localized, price) : product.displayPrice)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+                
+                if isPurchasing {
+                    ProgressView()
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(paywallGradient.opacity(0.5), lineWidth: 1.5)
+            )
         }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
     }
+}
+
+#Preview {
+    PaywallView()
 }

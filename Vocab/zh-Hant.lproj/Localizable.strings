@@ -1,0 +1,292 @@
+/* 
+ Localizable.strings (繁體中文)
+ Vocab
+*/
+
+// MARK: - Common
+"settings" = "設定";
+"done" = "完成";
+"cancel" = "取消";
+"confirm" = "確認";
+"save" = "儲存";
+"delete" = "刪除";
+"ok" = "確定";
+"yes" = "是";
+"no" = "否";
+"close" = "關閉";
+"loading" = "載入中";
+"retry" = "重試";
+
+// MARK: - Tab Bar
+"tab_progress" = "進度";
+"tab_study" = "學習";
+"tab_word_list" = "單字庫";
+
+// MARK: - Home
+"good_morning" = "早安，";
+"good_afternoon" = "午安，";
+"good_evening" = "晚安，";
+"total_progress" = "總進度";
+"mastered" = "已掌握";
+"to_learn" = "待學習";
+"start_review" = "開始複習";
+"add_new_word" = "新增單字";
+"view_all" = "查看全部";
+"vocabulary_energy" = "詞彙能量";
+"vocabulary_energy_score_label" = "能量值";
+"vocabulary_energy_tier_1_title" = "萌芽";
+"vocabulary_energy_tier_1_subtitle" = "新增單字並開始複習，為詞彙能量充能。";
+"vocabulary_energy_tier_2_title" = "成長";
+"vocabulary_energy_tier_2_subtitle" = "堅持複習，記憶會越來越牢固。";
+"vocabulary_energy_tier_3_title" = "蓄力";
+"vocabulary_energy_tier_3_subtitle" = "你的單字庫正在變強，保持節奏！";
+"vocabulary_energy_tier_4_title" = "迸發";
+"vocabulary_energy_tier_4_subtitle" = "已掌握大量單字，持續衝刺！";
+"vocabulary_energy_tier_5_title" = "巔峰";
+"vocabulary_energy_tier_5_subtitle" = "太棒了！你已是詞彙達人。";
+"vocabulary_energy_next_hint" = "距離下一檔還差 %d 點能量";
+"vocabulary_energy_last_7_days" = "近 7 天";
+"vocabulary_energy_last_7_days_pending" = "滿 7 天記錄後可看變化";
+"no_words_yet" = "目前還沒有單字";
+"go_add_words" = "快去新增一些單字開始學習吧！";
+"daily_motivation" = "今天也要元氣滿滿背單字 💪";
+"words_to_review" = "個單字待複習";
+"ai_smart_fill" = "AI 智能輔助輸入";
+
+// MARK: - Settings
+"account" = "帳號";
+"account_sign_in_description" = "登入 Apple 帳號以啟用 iCloud 資料同步功能";
+"general" = "一般";
+"data" = "資料";
+"vocabulary_data" = "單字庫資料";
+"app" = "應用程式";
+"about" = "關於";
+"help" = "說明與支援";
+"sign_out" = "登出";
+"sign_out_confirm" = "確定要登出嗎？登出後需要重新登入才能同步資料。";
+"language" = "您的母語";
+"appearance" = "外觀模式";
+"appearance_description" = "選擇應用程式的外觀模式，跟隨系統將依系統設定自動切換。";
+"supplement_root_synonyms" = "更新詞庫";
+"supplement_root_synonyms_description" = "僅更新缺少詞根、近義詞、反義詞或例句的單字，或內容與學習語言不一致的單字（已有且一致的不會重複調用 AI），依當前學習語言補充。";
+"supplement_start" = "開始更新";
+"supplement_progress_format" = "正在更新 %d / %d";
+"supplement_completed" = "更新完成";
+"supplement_no_words" = "目前沒有單字，無需更新。";
+"supplement_no_update_needed" = "所有單字內容完整且與學習語言一致，無需更新。";
+"supplement_api_calls_hint" = "預計消耗 %d 次 API 調用";
+"supplement_count_hint" = "共 %d 個單字中，%d 個需要更新（缺少內容或與學習語言不一致），將僅更新這些。預計消耗 %d 次 API 調用。";
+
+"supplement_section_header" = "詞庫補充";
+
+"language_description" = "選擇應用介面的顯示語言";
+"appearance_mode_system" = "系統";
+"appearance_mode_dark" = "深色";
+"appearance_mode_light" = "淺色";
+
+// MARK: - Add Word
+"word" = "單字";
+"definition" = "解釋";
+"part_of_speech" = "詞性與音標";
+"pronunciation" = "音標";
+"example" = "例句";
+"translation" = "翻譯";
+"root" = "詞根";
+"root_placeholder" = "詞根 / 詞源（如有）";
+"synonyms_antonyms" = "近義詞 / 反義詞";
+"synonyms_placeholder" = "近義詞 / 相關詞（英文，逗號分隔，如有）";
+"antonyms_placeholder" = "反義詞（英文，逗號分隔，如有）";
+"word_sheet" = "單字分組";
+"word_sheet_description" = "選擇要將單字加入的分組，預設使用今天的日期。";
+"save_word" = "儲存單字";
+"add_new_word_title" = "新增單字";
+"ai_fill" = "AI 填入";
+"camera_recognize" = "拍照辨識單字";
+"ai_generate_failed" = "AI 產生失敗";
+"select_recognition_region" = "選擇辨識區域";
+"recognize_full_image" = "辨識整張圖片";
+"recognize_selected_region" = "辨識選取區域";
+"duplicate_word_title" = "單字已存在";
+"duplicate_word_message" = "單字 \"%@\" 在此分組中已存在，是否仍然新增？";
+"skip" = "略過";
+"add_anyway" = "仍然新增";
+
+// MARK: - Study
+"focus_mode" = "專注模式";
+"recommended_review" = "推薦複習";
+"recommended_review_description" = "根據艾賓浩斯遺忘曲線推薦複習單字";
+"recommended_review_completed" = "推薦複習已完成\n去新增一些新單字吧！";
+"recommended_review_empty_no_words" = "單字庫中暫無單字，請先新增單字或檢查 iCloud 同步。";
+"recommended_review_empty_all_unlearned" = "尚無已「記住」的單字可進入間隔複習。請先用「複習全部」或「接著上次」鞏固生字。";
+"recommended_review_empty_no_due" = "暫無到期的複習單字，請明天再來，或使用下方「複習全部」。";
+"review_all" = "複習全部";
+"review_all_description" = "複習全部詞庫所有單字。";
+"continue_last" = "接續上次複習";
+"continue_last_description" = "複習忘記的與新增的單字。";
+"forgot" = "忘記了";
+"remembered" = "記住了";
+"daily_goal" = "每日目標";
+"click_to_flip" = "點擊翻面查看解釋";
+"question" = "問題";
+"answer" = "答案";
+"ai_update_example" = "AI 更新例句";
+"review_prompt" = "複習提示";
+"review_again" = "再複習一遍";
+"later" = "稍後再說";
+"all_words_reviewed" = "所有單字都複習完了\n去新增一些新單字吧！";
+"today_words_reviewed" = "今天的單字都背完了\n去新增一些新單字吧！";
+"go_add_new_words" = "去新增一些新單字吧！";
+"round_complete" = "一輪完成";
+"words_need_review" = "個單字需要複習";
+"select_word_sheet" = "選擇單字分組";
+"all_sheets" = "全部分組";
+"play_pronunciation" = "播放發音";
+
+// MARK: - Batch Add
+"batch_add_words" = "批次新增單字";
+"no_words_recognized" = "未辨識到單字";
+"recognized_words" = "已辨識的單字";
+"select_all" = "全選";
+"deselect_all" = "取消全選";
+"selected_count" = "已選擇 %d / %d 個單字";
+"adding" = "正在新增... (%d/%d)";
+"batch_add" = "批次新增 (%d)";
+"add_failed" = "新增失敗";
+"no_words_recognized_error" = "未辨識到任何單字，請確認圖片中包含清晰的英文文字。";
+"recognize_failed" = "辨識失敗：%@";
+"batch_add_completed" = "批次新增完成";
+"batch_add_completed_message" = "成功新增 %d 個單字，已略過 %d 個重複單字。";
+
+// MARK: - Data Settings
+"local_data" = "本機資料";
+"import_data" = "匯入本機資料";
+"export_data" = "匯出本機資料";
+"data_backup" = "匯入或匯出本機資料備份";
+"delete_account" = "刪除帳號";
+"delete_account_description" = "將移除帳號資訊並清除此裝置上的所有單字資料。";
+"delete_account_warning" = "刪除後，帳號資料、本機單字紀錄、備份與圖片都會被徹底清除且無法復原。";
+"delete_account_confirm" = "確定要刪除帳號與所有資料嗎？此操作無法復原。";
+"confirm_delete" = "確認刪除";
+"data_exported" = "資料已成功匯出";
+"data_imported" = "資料已成功匯入";
+"export_success" = "匯出成功";
+"import_success" = "匯入成功";
+"import_failed" = "匯入失敗";
+"export_csv" = "匯出為 CSV";
+"export_csv_description" = "將選取的單字庫匯出為 CSV 檔案";
+"select_sheets_to_export" = "選擇要匯出的單字庫";
+"select_all" = "全選";
+"deselect_all" = "取消全選";
+"no_sheets_selected" = "請至少選擇一個單字庫";
+"no_words_in_selected_sheets" = "選取的單字庫中沒有單字";
+"import_csv_file" = "匯入本機 CSV 檔案";
+"export_csv_file" = "匯出為 CSV 檔案";
+
+// MARK: - Word List
+"my_word_list" = "我的單字庫";
+"search_words" = "搜尋單字...";
+"no_results" = "沒有結果";
+"try_other_keywords" = "嘗試使用其他關鍵字搜尋";
+
+// MARK: - About
+"version" = "版本 %@";
+"features" = "功能介紹";
+"updates" = "版本更新";
+"core_features" = "核心功能";
+"version_history" = "版本歷史";
+"software_license" = "《軟體授權及服務協議》";
+"privacy_policy" = "《隱私權保護指引》";
+"copyright" = "MooyuNet 版權所有 © 2025";
+"developer_website" = "更多 App 請造訪開發者網站：Mooyu.cc";
+"apple_user" = "Apple 使用者";
+"user_name" = "使用者名稱";
+"user_name_description" = "修改後的名稱將顯示在應用程式中。";
+"edit_user_name" = "編輯名稱";
+
+// MARK: - Features
+"word_management" = "單字管理";
+"word_management_description" = "輕鬆新增、編輯與管理您的單字庫，支援自訂單字分類。";
+"intelligent_learning" = "智慧學習";
+"intelligent_learning_description" = "AI 輔助輸入單字，自動產生解釋、例句與發音，讓學習更有效率。";
+"camera_recognition_feature" = "拍照辨識";
+"camera_recognition_description" = "使用相機拍照辨識單字，快速將新單字加入學習清單。";
+"learning_progress" = "學習進度";
+"learning_progress_description" = "即時追蹤學習進度，查看已掌握與待學習的單字統計。";
+"review_system" = "複習系統";
+"review_system_description" = "智慧複習演算法，幫助您鞏固記憶、提升學習效率。";
+"first_release" = "首次發佈";
+"support_word_add" = "支援單字新增與管理";
+"ai_smart_fill_feature" = "AI 智能輔助輸入";
+"camera_recognize_feature" = "拍照辨識單字功能";
+"progress_tracking" = "學習進度追蹤";
+"review_system_feature" = "複習系統";
+"version_date_format" = "2025 年 1 月";
+"version_update_2_4_date" = "2025 年 3 月 22 日";
+"version_update_2_4_recommended_review" = "推薦複習：優化「推薦複習」的單字篩選與排序計算邏輯，使待複習清單更貼合記憶規律與實際學習進度";
+"version_update_2_4_progress_tab" = "進度頁：新增「詞彙能量」統計（總積分、等級與距下一級的進度、近 7 天能量變化）；精簡首頁資訊結構，突出「開始複習」並直達學習 tab";
+"version_update_2_4_study_ui" = "學習與閃卡：複習流程、閃卡與單字列表等場景的互動與展示細節優化";
+"version_update_2_4_settings_data" = "設定與資料：設定與資料相關頁面的版面與操作體驗微調";
+"version_update_2_4_ai_paywall" = "AI 與付費相關：AI 呼叫提示、付費牆與購買流程的展示與邏輯細節改進";
+"version_update_2_4_stability" = "穩定性：問題修復與效能方面的小幅提升";
+
+// MARK: - Errors
+"unknown_error" = "未知錯誤";
+"invalid_image" = "無效的圖片";
+"recognition_failed" = "文字辨識失敗：%@";
+"processing_failed" = "圖片處理失敗：%@";
+
+// MARK: - Paywall
+"paywall_title" = "升級為 Pro 版";
+"paywall_subtitle" = "解鎖更多進階功能，提升學習體驗";
+"paywall_feature_title" = "Pro 功能";
+"paywall_feature_ai" = "AI 智慧學習助理";
+"paywall_feature_import_export" = "進階資料匯入匯出";
+"paywall_button_restore" = "恢復購買";
+"paywall_current_subscription" = "目前訂閱";
+"paywall_expires_on" = "到期日：";
+"paywall_lifetime_unlocked" = "已解鎖終身會員";
+"paywall_lifetime_sync_hint" = "您已擁有所有 Pro 功能，可永久使用。";
+"subscription_auto_renew_note" = "訂閱將自動續訂，可在帳號設定中取消。";
+"subscription_monthly" = "月訂閱";
+"subscription_yearly" = "年訂閱";
+"subscription_weekly" = "週訂閱";
+"subscription_daily" = "日訂閱";
+"subscription_default" = "訂閱";
+"one_time_purchase" = "一次性購買";
+"terms_of_use" = "使用條款";
+"privacy_policy" = "隱私權政策";
+"terms_url" = "https://example.com/terms";
+"privacy_url" = "https://example.com/privacy";
+"onboarding_complete" = "開始使用";
+"membership_status_lifetime_active" = "終身有效";
+"trial_7_days" = "7 天免費試用";
+"trial_days" = "%d 天免費試用";
+"trial_weeks" = "%d 週免費試用";
+"trial_months" = "%d 個月免費試用";
+"trial_years" = "%d 年免費試用";
+"trial_free" = "免費試用";
+"then" = "之後";
+
+// MARK: - Usage & Paywall
+"usage_no_calls_remaining" = "沒有剩餘次數";
+"usage_one_call_remaining" = "剩餘 1 次";
+"usage_calls_remaining" = "剩餘 %d 次";
+"usage_remaining" = "剩餘次數";
+"usage_total_used" = "已使用";
+"usage_stats" = "已使用 %d 次，剩餘 %d 次";
+"usage_purchase_title" = "購買調用次數";
+"usage_purchase_calls" = "%d 次 AI 調用";
+"usage_price_format" = "¥%.2f";
+"usage_purchase_description" = "每次購買可獲得 %d 次 AI API 調用。";
+"usage_purchase_note" = "調用次數永久有效，不會過期。";
+"usage_consumption_info" = "以下操作會消耗 AI 調用次數：";
+"usage_consumption_ai_fill" = "每次單字的 AI 補充會消耗 1 次調用。";
+"usage_consumption_ai_example" = "每次 AI 更新例句會消耗 1 次調用。";
+"free_trial_welcome_title" = "恭喜獲得免費額度";
+"free_trial_welcome_message" = "您已獲得 %d 次 AI 調用免費額度，可用於單字 AI 補充、AI 更新例句等功能。";
+"free_trial_welcome_button" = "知道了";
+"paywall_usage_title" = "AI 調用次數";
+"paywall_usage_subtitle" = "購買更多次數以繼續使用 AI 功能";
+"settings_ai_usage" = "購買";
+"error" = "錯誤";
+

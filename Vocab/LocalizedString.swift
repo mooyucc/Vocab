@@ -65,7 +65,7 @@ extension DateFormatter {
     static func localizedDateFormatter() -> DateFormatter {
         let formatter = DateFormatter()
         let language = AppSettingsManager.shared.language
-        if language == .chinese {
+        if language == .chinese || language == .chineseTraditional {
             formatter.locale = Locale(identifier: "zh_Hans")
             formatter.dateFormat = "yyyy年M月d日"
         } else {
@@ -126,13 +126,6 @@ extension WordSheet {
     }
 }
 
-/// Text 视图扩展，直接使用本地化字符串
-extension Text {
-    init(_ key: LocalizedKey) {
-        self.init(key.rawValue.localized)
-    }
-}
-
 /// 本地化键枚举，确保类型安全
 enum LocalizedKey: String {
     // MARK: - Common
@@ -160,8 +153,22 @@ enum LocalizedKey: String {
     case toLearn = "to_learn"
     case startReview = "start_review"
     case addNewWord = "add_new_word"
-    case recentlyAdded = "recently_added"
     case viewAll = "view_all"
+    case vocabularyEnergy = "vocabulary_energy"
+    case vocabularyEnergyScoreLabel = "vocabulary_energy_score_label"
+    case vocabularyEnergyTier1Title = "vocabulary_energy_tier_1_title"
+    case vocabularyEnergyTier1Subtitle = "vocabulary_energy_tier_1_subtitle"
+    case vocabularyEnergyTier2Title = "vocabulary_energy_tier_2_title"
+    case vocabularyEnergyTier2Subtitle = "vocabulary_energy_tier_2_subtitle"
+    case vocabularyEnergyTier3Title = "vocabulary_energy_tier_3_title"
+    case vocabularyEnergyTier3Subtitle = "vocabulary_energy_tier_3_subtitle"
+    case vocabularyEnergyTier4Title = "vocabulary_energy_tier_4_title"
+    case vocabularyEnergyTier4Subtitle = "vocabulary_energy_tier_4_subtitle"
+    case vocabularyEnergyTier5Title = "vocabulary_energy_tier_5_title"
+    case vocabularyEnergyTier5Subtitle = "vocabulary_energy_tier_5_subtitle"
+    case vocabularyEnergyNextHint = "vocabulary_energy_next_hint"
+    case vocabularyEnergyLast7Days = "vocabulary_energy_last_7_days"
+    case vocabularyEnergyLast7DaysPending = "vocabulary_energy_last_7_days_pending"
     case noWordsYet = "no_words_yet"
     case goAddWords = "go_add_words"
     case dailyMotivation = "daily_motivation"
@@ -170,17 +177,32 @@ enum LocalizedKey: String {
     
     // MARK: - Settings
     case account = "account"
+    case accountSignInDescription = "account_sign_in_description"
     case general = "general"
     case data = "data"
+    case vocabularyData = "vocabulary_data"
     case app = "app"
     case about = "about"
     case help = "help"
     case signOut = "sign_out"
     case signOutConfirm = "sign_out_confirm"
     case language = "language"
+    case targetLanguage = "target_language"
     case appearance = "appearance"
     case appearanceDescription = "appearance_description"
     case languageDescription = "language_description"
+    case targetLanguageDescription = "target_language_description"
+    
+    case supplementRootSynonyms = "supplement_root_synonyms"
+    case supplementRootSynonymsDescription = "supplement_root_synonyms_description"
+    case supplementStart = "supplement_start"
+    case supplementProgressFormat = "supplement_progress_format"
+    case supplementCompleted = "supplement_completed"
+    case supplementNoWords = "supplement_no_words"
+    case supplementNoUpdateNeeded = "supplement_no_update_needed"
+    case supplementApiCallsHint = "supplement_api_calls_hint"
+    case supplementCountHint = "supplement_count_hint"
+    case supplementSectionHeader = "supplement_section_header"
     
     // MARK: - Add Word
     case word = "word"
@@ -189,6 +211,11 @@ enum LocalizedKey: String {
     case pronunciation = "pronunciation"
     case example = "example"
     case translation = "translation"
+    case root = "root"
+    case rootPlaceholder = "root_placeholder"
+    case synonymsAntonyms = "synonyms_antonyms"
+    case synonymsPlaceholder = "synonyms_placeholder"
+    case antonymsPlaceholder = "antonyms_placeholder"
     case wordSheet = "word_sheet"
     case wordSheetDescription = "word_sheet_description"
     case saveWord = "save_word"
@@ -199,12 +226,19 @@ enum LocalizedKey: String {
     case selectRecognitionRegion = "select_recognition_region"
     case recognizeFullImage = "recognize_full_image"
     case recognizeSelectedRegion = "recognize_selected_region"
+    case duplicateWordTitle = "duplicate_word_title"
+    case duplicateWordMessage = "duplicate_word_message"
+    case skip = "skip"
+    case addAnyway = "add_anyway"
     
     // MARK: - Study
     case focusMode = "focus_mode"
     case recommendedReview = "recommended_review"
     case recommendedReviewDescription = "recommended_review_description"
     case recommendedReviewCompleted = "recommended_review_completed"
+    case recommendedReviewEmptyNoWords = "recommended_review_empty_no_words"
+    case recommendedReviewEmptyAllUnlearned = "recommended_review_empty_all_unlearned"
+    case recommendedReviewEmptyNoDue = "recommended_review_empty_no_due"
     case reviewAll = "review_all"
     case reviewAllDescription = "review_all_description"
     case continueLast = "continue_last"
@@ -240,6 +274,8 @@ enum LocalizedKey: String {
     case addFailed = "add_failed"
     case noWordsRecognizedError = "no_words_recognized_error"
     case recognizeFailed = "recognize_failed"
+    case batchAddCompleted = "batch_add_completed"
+    case batchAddCompletedMessage = "batch_add_completed_message"
     
     // MARK: - Data Settings
     case localData = "local_data"
@@ -256,6 +292,13 @@ enum LocalizedKey: String {
     case exportSuccess = "export_success"
     case importSuccess = "import_success"
     case importFailed = "import_failed"
+    case exportCSV = "export_csv"
+    case exportCSVDescription = "export_csv_description"
+    case selectSheetsToExport = "select_sheets_to_export"
+    case noSheetsSelected = "no_sheets_selected"
+    case noWordsInSelectedSheets = "no_words_in_selected_sheets"
+    case importCSVFile = "import_csv_file"
+    case exportCSVFile = "export_csv_file"
     
     // MARK: - Word List
     case myWordList = "my_word_list"
@@ -269,10 +312,51 @@ enum LocalizedKey: String {
     case updates = "updates"
     case coreFeatures = "core_features"
     case versionHistory = "version_history"
+    case softwareLicense = "software_license"
+    case privacyPolicy = "privacy_policy"
+    case copyright = "copyright"
+    case developerWebsite = "developer_website"
+    case appleUser = "apple_user"
+    case userName = "user_name"
+    case userNameDescription = "user_name_description"
+    case editUserName = "edit_user_name"
+    
+    // MARK: - Features
+    case wordManagement = "word_management"
+    case wordManagementDescription = "word_management_description"
+    case intelligentLearning = "intelligent_learning"
+    case intelligentLearningDescription = "intelligent_learning_description"
+    case cameraRecognition = "camera_recognition_feature"
+    case cameraRecognitionDescription = "camera_recognition_description"
+    case learningProgress = "learning_progress"
+    case learningProgressDescription = "learning_progress_description"
+    case reviewSystem = "review_system"
+    case reviewSystemDescription = "review_system_description"
+    case firstRelease = "first_release"
+    case supportWordAdd = "support_word_add"
+    case aiSmartFillFeature = "ai_smart_fill_feature"
+    case cameraRecognizeFeature = "camera_recognize_feature"
+    case progressTracking = "progress_tracking"
+    case reviewSystemFeature = "review_system_feature"
+    case versionDateFormat = "version_date_format"
+    case versionUpdate24Date = "version_update_2_4_date"
+    case versionUpdate24RecommendedReview = "version_update_2_4_recommended_review"
+    case versionUpdate24ProgressTab = "version_update_2_4_progress_tab"
+    case versionUpdate24StudyUI = "version_update_2_4_study_ui"
+    case versionUpdate24SettingsData = "version_update_2_4_settings_data"
+    case versionUpdate24AIPaywall = "version_update_2_4_ai_paywall"
+    case versionUpdate24Stability = "version_update_2_4_stability"
     
     // MARK: - Errors
     case unknownError = "unknown_error"
     case invalidImage = "invalid_image"
     case recognitionFailed = "recognition_failed"
     case processingFailed = "processing_failed"
+}
+
+/// Text 视图扩展，直接使用本地化字符串
+extension Text {
+    init(_ key: LocalizedKey) {
+        self.init(key.rawValue.localized)
+    }
 }

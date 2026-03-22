@@ -1,0 +1,291 @@
+/* 
+ Localizable.strings (한국어)
+ Vocab
+*/
+
+// MARK: - Common
+"settings" = "설정";
+"done" = "완료";
+"cancel" = "취소";
+"confirm" = "확인";
+"save" = "저장";
+"delete" = "삭제";
+"ok" = "확인";
+"yes" = "예";
+"no" = "아니오";
+"close" = "닫기";
+"loading" = "불러오는 중";
+"retry" = "다시 시도";
+
+// MARK: - Tab Bar
+"tab_progress" = "진행";
+"tab_study" = "학습";
+"tab_word_list" = "단어장";
+
+// MARK: - Home
+"good_morning" = "좋은 아침, ";
+"good_afternoon" = "좋은 오후, ";
+"good_evening" = "좋은 저녁, ";
+"total_progress" = "전체 진행도";
+"mastered" = "완전히 암기";
+"to_learn" = "학습 예정";
+"start_review" = "복습 시작";
+"add_new_word" = "단어 추가";
+"view_all" = "전체 보기";
+"vocabulary_energy" = "어휘 에너지";
+"vocabulary_energy_score_label" = "에너지 점수";
+"vocabulary_energy_tier_1_title" = "새싹";
+"vocabulary_energy_tier_1_subtitle" = "단어를 추가하고 복습을 시작해 에너지를 채워 보세요.";
+"vocabulary_energy_tier_2_title" = "성장";
+"vocabulary_energy_tier_2_subtitle" = "꾸준히 복습하면 기억이 더 오래 남아요.";
+"vocabulary_energy_tier_3_title" = "충전 중";
+"vocabulary_energy_tier_3_subtitle" = "단어장이 한층 강해지고 있어요. 리듬을 유지해요!";
+"vocabulary_energy_tier_4_title" = "도약";
+"vocabulary_energy_tier_4_subtitle" = "큰 성과를 내고 있어요. 조금만 더 힘내요!";
+"vocabulary_energy_tier_5_title" = "정상";
+"vocabulary_energy_tier_5_subtitle" = "대단해요! 어휘 챔피언이에요.";
+"vocabulary_energy_next_hint" = "다음 단계까지 %d점 남음";
+"vocabulary_energy_last_7_days" = "최근 7일";
+"vocabulary_energy_last_7_days_pending" = "7일 기록이 쌓이면 변화를 볼 수 있어요";
+"no_words_yet" = "아직 단어가 없습니다";
+"go_add_words" = "단어를 추가해서 학습을 시작해 보세요!";
+"daily_motivation" = "오늘도 열심히 단어를 외워봐요 💪";
+"words_to_review" = "개 단어 복습 필요";
+"ai_smart_fill" = "AI 스마트 입력";
+
+// MARK: - Settings
+"account" = "계정";
+"account_sign_in_description" = "Apple 계정으로 로그인하여 iCloud 데이터 동기화를 활성화합니다.";
+"general" = "일반";
+"data" = "데이터";
+"vocabulary_data" = "단어장 데이터";
+"app" = "앱";
+"about" = "정보";
+"help" = "도움말 및 지원";
+"sign_out" = "로그아웃";
+"sign_out_confirm" = "정말 로그아웃하시겠습니까? 로그아웃 후에는 다시 로그인해야 데이터를 동기화할 수 있습니다.";
+"language" = "모국어";
+"appearance" = "화면 모드";
+"appearance_description" = "앱의 화면 모드를 선택합니다. 시스템 따르기를 선택하면 시스템 설정에 따라 자동으로 전환됩니다.";
+"supplement_root_synonyms" = "단어장 업데이트";
+"supplement_root_synonyms_description" = "내용이 부족한 단어나 예문·어근·유의어·반의어가 학습 언어와 일치하지 않는 단어만 업데이트합니다(완전히 일치하는 단어는 API 절약을 위해 건너뜁니다). 현재 학습 언어로 보완합니다.";
+"supplement_start" = "업데이트 시작";
+"supplement_progress_format" = "업데이트 중 %d / %d";
+"supplement_completed" = "업데이트 완료";
+"supplement_no_words" = "단어가 없습니다. 업데이트할 필요가 없습니다.";
+"supplement_no_update_needed" = "모든 단어가 완전하며 학습 언어와 일치합니다. 업데이트할 필요가 없습니다.";
+"supplement_api_calls_hint" = "약 %d회 API 호출이 사용됩니다";
+"supplement_count_hint" = "총 %d개 단어 중 %d개를 업데이트합니다(내용 부족 또는 언어 불일치). 약 %d회 API 호출이 사용됩니다.";
+"supplement_section_header" = "단어장 보완";
+
+"language_description" = "앱 인터페이스에 사용할 언어를 선택합니다.";
+"appearance_mode_system" = "시스템";
+"appearance_mode_dark" = "다크";
+"appearance_mode_light" = "라이트";
+
+// MARK: - Add Word
+"word" = "단어";
+"definition" = "뜻";
+"part_of_speech" = "품사 및 발음 기호";
+"pronunciation" = "발음 기호";
+"example" = "예문";
+"translation" = "번역";
+"root" = "어근";
+"root_placeholder" = "어근 / 어원 (있는 경우)";
+"synonyms_antonyms" = "유의어 / 반의어";
+"synonyms_placeholder" = "유의어 / 관련 단어 (영어, 쉼표로 구분, 있는 경우)";
+"antonyms_placeholder" = "반의어 (영어, 쉼표로 구분, 있는 경우)";
+"word_sheet" = "단어장 그룹";
+"word_sheet_description" = "단어를 추가할 그룹을 선택합니다. 기본값은 오늘 날짜입니다.";
+"save_word" = "단어 저장";
+"add_new_word_title" = "단어 추가";
+"ai_fill" = "AI 채우기";
+"camera_recognize" = "카메라 인식";
+"ai_generate_failed" = "AI 생성 실패";
+"select_recognition_region" = "인식 영역 선택";
+"recognize_full_image" = "전체 이미지 인식";
+"recognize_selected_region" = "선택 영역 인식";
+"duplicate_word_title" = "이미 있는 단어";
+"duplicate_word_message" = "단어 \"%@\" 는 이 그룹에 이미 존재합니다. 그래도 추가하시겠습니까?";
+"skip" = "건너뛰기";
+"add_anyway" = "그래도 추가";
+
+// MARK: - Study
+"focus_mode" = "집중 모드";
+"recommended_review" = "추천 복습";
+"recommended_review_description" = "에빙하우스 망각 곡선에 따라 복습할 단어를 추천합니다";
+"recommended_review_completed" = "추천 복습이 완료되었습니다\n새로운 단어를 추가해 보세요!";
+"recommended_review_empty_no_words" = "단어가 없습니다. 단어를 추가하거나 iCloud 동기화를 확인하세요.";
+"recommended_review_empty_all_unlearned" = "간격 복습에 쓸 ‘기억함’ 단어가 아직 없습니다. 먼저 ‘전체 복습’ 또는 ‘이어서’로 학습해 보세요.";
+"recommended_review_empty_no_due" = "지금 복습할 단어가 없습니다. 내일 다시 시도하거나 아래 ‘전체 복습’을 이용하세요.";
+"review_all" = "전체 복습";
+"review_all_description" = "모든 단어장의 단어를 복습합니다.";
+"continue_last" = "지난 학습 이어서";
+"continue_last_description" = "잊어버린 단어와 새로 추가한 단어를 복습합니다.";
+"forgot" = "잊어버림";
+"remembered" = "기억함";
+"daily_goal" = "일일 목표";
+"click_to_flip" = "탭하여 뒤집고 뜻을 확인하세요.";
+"question" = "질문";
+"answer" = "답변";
+"ai_update_example" = "AI 예문 업데이트";
+"review_prompt" = "복습 힌트";
+"review_again" = "다시 복습";
+"later" = "나중에";
+"all_words_reviewed" = "모든 단어 복습 완료\n새로운 단어를 추가해 보세요!";
+"today_words_reviewed" = "오늘의 단어 복습 완료\n새로운 단어를 추가해 보세요!";
+"go_add_new_words" = "새로운 단어를 추가해 보세요!";
+"round_complete" = "한 라운드 완료";
+"words_need_review" = "개 단어 복습 필요";
+"select_word_sheet" = "단어장 그룹 선택";
+"all_sheets" = "전체 그룹";
+"play_pronunciation" = "발음 재생";
+
+// MARK: - Batch Add
+"batch_add_words" = "단어 일괄 추가";
+"no_words_recognized" = "인식된 단어가 없습니다";
+"recognized_words" = "인식된 단어";
+"select_all" = "전체 선택";
+"deselect_all" = "전체 해제";
+"selected_count" = "선택됨 %d / %d 개 단어";
+"adding" = "추가 중... (%d/%d)";
+"batch_add" = "일괄 추가 (%d)";
+"add_failed" = "추가 실패";
+"no_words_recognized_error" = "어떠한 단어도 인식하지 못했습니다. 이미지에 선명한 영어 텍스트가 포함되어 있는지 확인해 주세요.";
+"recognize_failed" = "인식 실패: %@";
+"batch_add_completed" = "일괄 추가 완료";
+"batch_add_completed_message" = "%d 개 단어를 성공적으로 추가했습니다. 중복된 %d 개 단어는 건너뛰었습니다.";
+
+// MARK: - Data Settings
+"local_data" = "로컬 데이터";
+"import_data" = "로컬 데이터 가져오기";
+"export_data" = "로컬 데이터 내보내기";
+"data_backup" = "로컬 데이터 백업 가져오기 / 내보내기";
+"delete_account" = "계정 삭제";
+"delete_account_description" = "계정 정보를 제거하고 이 기기의 모든 단어 데이터를 삭제합니다.";
+"delete_account_warning" = "삭제 후에는 계정 정보, 로컬 단어 기록, 백업 및 이미지가 완전히 삭제되며 복구할 수 없습니다.";
+"delete_account_confirm" = "정말 계정과 모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.";
+"confirm_delete" = "삭제 확인";
+"data_exported" = "데이터 내보내기 완료";
+"data_imported" = "데이터 가져오기 완료";
+"export_success" = "내보내기 성공";
+"import_success" = "가져오기 성공";
+"import_failed" = "가져오기 실패";
+"export_csv" = "CSV 로 내보내기";
+"export_csv_description" = "선택한 단어장을 CSV 파일로 내보냅니다.";
+"select_sheets_to_export" = "내보낼 단어장 선택";
+"select_all" = "전체 선택";
+"deselect_all" = "전체 해제";
+"no_sheets_selected" = "최소 한 개의 단어장을 선택해 주세요.";
+"no_words_in_selected_sheets" = "선택한 단어장에 단어가 없습니다.";
+"import_csv_file" = "로컬 CSV 파일 가져오기";
+"export_csv_file" = "CSV 파일로 내보내기";
+
+// MARK: - Word List
+"my_word_list" = "내 단어장";
+"search_words" = "단어 검색...";
+"no_results" = "검색 결과가 없습니다";
+"try_other_keywords" = "다른 키워드로 검색해 보세요.";
+
+// MARK: - About
+"version" = "버전 %@";
+"features" = "기능";
+"updates" = "업데이트";
+"core_features" = "핵심 기능";
+"version_history" = "버전 기록";
+"software_license" = "소프트웨어 사용권 및 서비스 약관";
+"privacy_policy" = "개인정보 보호정책";
+"copyright" = "MooyuNet 저작권 © 2025";
+"developer_website" = "더 많은 앱은 개발자 웹사이트 Mooyu.cc 에서 확인하세요.";
+"apple_user" = "Apple 사용자";
+"user_name" = "사용자 이름";
+"user_name_description" = "변경된 사용자 이름은 앱에 표시됩니다.";
+"edit_user_name" = "이름 편집";
+
+// MARK: - Features
+"word_management" = "단어 관리";
+"word_management_description" = "단어 추가, 편집 및 관리를 쉽게 할 수 있으며, 사용자 정의 단어장 분류를 지원합니다.";
+"intelligent_learning" = "지능형 학습";
+"intelligent_learning_description" = "AI 가 단어 입력을 도와주고, 뜻과 예문, 발음을 자동으로 생성하여 학습 효율을 높여 줍니다.";
+"camera_recognition_feature" = "카메라 인식";
+"camera_recognition_description" = "카메라로 단어를 인식하여 학습 목록에 빠르게 추가합니다.";
+"learning_progress" = "학습 진행 상황";
+"learning_progress_description" = "실시간으로 학습 진행을 추적하고, 이미 암기한 단어와 학습해야 할 단어 통계를 확인할 수 있습니다.";
+"review_system" = "복습 시스템";
+"review_system_description" = "지능형 복습 알고리즘으로 기억을 공고히 하고 학습 효율을 높입니다.";
+"first_release" = "첫 출시";
+"support_word_add" = "단어 추가 및 관리 지원";
+"ai_smart_fill_feature" = "AI 스마트 입력";
+"camera_recognize_feature" = "카메라 단어 인식 기능";
+"progress_tracking" = "학습 진행 추적";
+"review_system_feature" = "복습 시스템";
+"version_date_format" = "2025년 1월";
+"version_update_2_4_date" = "2025년 3월 22일";
+"version_update_2_4_recommended_review" = "추천 복습: 필터·정렬 로직을 개선해 복습 목록이 기억 패턴과 학습 진도에 더 잘 맞도록 했습니다.";
+"version_update_2_4_progress_tab" = "진행 탭: 어휘 에너지(총점, 등급·다음 등급까지 진행, 7일 변화) 추가. 홈을 정리하고 「복습 시작」으로 학습 탭 이동.";
+"version_update_2_4_study_ui" = "학습·플래시카드: 복습 흐름, 플래시카드, 단어 목록의 조작·표시를 다듬었습니다.";
+"version_update_2_4_settings_data" = "설정·데이터: 설정 및 데이터 화면의 레이아웃과 사용성을 소폭 조정했습니다.";
+"version_update_2_4_ai_paywall" = "AI·결제: AI 사용 안내와 결제벽·구매 흐름 표시·동작을 개선했습니다.";
+"version_update_2_4_stability" = "안정성: 버그 수정과 소폭의 성능 개선.";
+
+// MARK: - Errors
+"unknown_error" = "알 수 없는 오류";
+"invalid_image" = "유효하지 않은 이미지";
+"recognition_failed" = "텍스트 인식 실패: %@";
+"processing_failed" = "이미지 처리 실패: %@";
+
+// MARK: - Paywall
+"paywall_title" = "Pro 버전으로 업그레이드";
+"paywall_subtitle" = "더 많은 프리미엄 기능을 잠금 해제하고 학습 경험을 향상하세요.";
+"paywall_feature_title" = "Pro 기능";
+"paywall_feature_ai" = "AI 학습 도우미";
+"paywall_feature_import_export" = "고급 데이터 가져오기/내보내기";
+"paywall_button_restore" = "구매 복원";
+"paywall_current_subscription" = "현재 구독";
+"paywall_expires_on" = "만료일: ";
+"paywall_lifetime_unlocked" = "평생 멤버십이 활성화되었습니다";
+"paywall_lifetime_sync_hint" = "모든 Pro 기능을 영구적으로 사용할 수 있습니다.";
+"subscription_auto_renew_note" = "구독은 자동으로 갱신되며, 계정 설정에서 언제든지 해지할 수 있습니다.";
+"subscription_monthly" = "월간 구독";
+"subscription_yearly" = "연간 구독";
+"subscription_weekly" = "주간 구독";
+"subscription_daily" = "일간 구독";
+"subscription_default" = "구독";
+"one_time_purchase" = "일회성 구매";
+"terms_of_use" = "이용 약관";
+"privacy_policy" = "개인정보 처리방침";
+"terms_url" = "https://example.com/terms";
+"privacy_url" = "https://example.com/privacy";
+"onboarding_complete" = "시작하기";
+"membership_status_lifetime_active" = "평생 이용 가능";
+"trial_7_days" = "7일 무료 체험";
+"trial_days" = "%d일 무료 체험";
+"trial_weeks" = "%d주 무료 체험";
+"trial_months" = "%d개월 무료 체험";
+"trial_years" = "%d년 무료 체험";
+"trial_free" = "무료 체험";
+"then" = "그 후";
+
+// MARK: - Usage & Paywall
+"usage_no_calls_remaining" = "남은 호출 횟수가 없습니다";
+"usage_one_call_remaining" = "남은 호출 1회";
+"usage_calls_remaining" = "남은 호출 %d회";
+"usage_remaining" = "남은 횟수";
+"usage_total_used" = "사용됨";
+"usage_stats" = "%d회 사용됨, %d회 남음";
+"usage_purchase_title" = "호출 횟수 구매";
+"usage_purchase_calls" = "AI 호출 %d회";
+"usage_price_format" = "₩%.2f";
+"usage_purchase_description" = "한 번 구매할 때마다 AI API 호출 %d회를 획득합니다.";
+"usage_purchase_note" = "호출 횟수는 만료되지 않으며, 영구적으로 사용할 수 있습니다.";
+"usage_consumption_info" = "다음 작업은 AI 호출 횟수를 소모합니다:";
+"usage_consumption_ai_fill" = "단어를 AI로 보완할 때마다 1회 소모됩니다.";
+"usage_consumption_ai_example" = "AI로 예문을 업데이트할 때마다 1회 소모됩니다.";
+"free_trial_welcome_title" = "무료 크레딧을 받았습니다";
+"free_trial_welcome_message" = "단어 AI 보완, 예문 업데이트 등에 사용할 수 있는 AI 호출 %d회 무료 크레딧을 받았습니다.";
+"free_trial_welcome_button" = "알겠습니다";
+"paywall_usage_title" = "AI 호출 크레딧";
+"paywall_usage_subtitle" = "AI 기능을 계속 사용하려면 더 많은 크레딧을 구매하세요.";
+"settings_ai_usage" = "구매";
+"error" = "오류";
+

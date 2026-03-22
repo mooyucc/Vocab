@@ -6,18 +6,22 @@
 //
 
 import SwiftUI
+import SwiftData
 import AuthenticationServices
 import UIKit
 
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var authManager: AuthenticationManager
-    @EnvironmentObject var entitlementManager: EntitlementManager
     @ObservedObject private var settingsManager = AppSettingsManager.shared
+    @Query private var words: [Word]
+    @Query private var sheets: [WordSheet]
     @State private var showSignOutAlert = false
     @State private var showEditNameSheet = false
     @State private var editingName = ""
     @State private var showPaywall = false
+    @ObservedObject private var usageTracker = UsageTracker.shared
     
     var body: some View {
         NavigationStack {
@@ -31,7 +35,7 @@ struct SettingsView: View {
                             Circle()
                                 .fill(
                                     LinearGradient(
-                                        gradient: Gradient(colors: [Color.indigo, Color.purple]),
+                                        gradient: Gradient(colors: [Color(hex: "FE6A57"), Color(hex: "FE2E69")]),
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -40,12 +44,12 @@ struct SettingsView: View {
                                 .overlay {
                                     if let name = authManager.userName, !name.isEmpty {
                                         Text(String(name.prefix(1)))
-                                            .font(.title2)
+                                            .font(.title)
                                             .fontWeight(.semibold)
                                             .foregroundStyle(.white)
                                     } else {
                                         Image(systemName: "person.fill")
-                                            .font(.title2)
+                                            .font(.title)
                                             .foregroundStyle(.white)
                                     }
                                 }
@@ -56,7 +60,7 @@ struct SettingsView: View {
                                         .font(.headline)
                                         .foregroundStyle(.primary)
                                 } else {
-                                    Text("Apple 用户")
+                                    Text(LocalizedKey.appleUser.rawValue.localized)
                                         .font(.headline)
                                         .foregroundStyle(.primary)
                                 }
@@ -84,66 +88,89 @@ struct SettingsView: View {
                                 Text(LocalizedKey.signOut)
                             }
                         }
+                        
+                        NavigationLink {
+                            DeleteAccountConfirmView(
+                                modelContext: modelContext,
+                                words: words,
+                                sheets: sheets
+                            )
+                        } label: {
+                            HStack {
+                                Image(systemName: "person.crop.circle.badge.minus")
+                                    .foregroundStyle(.red)
+                                Text(LocalizedKey.deleteAccount.rawValue.localized)
+                                    .foregroundStyle(.red)
+                            }
+                        }
                     } else {
                         // 未登录状态
-                        SignInWithAppleButton(
-                            onRequest: { request in
-                                request.requestedScopes = [.fullName, .email]
-                            },
-                            onCompletion: { result in
-                                switch result {
-                                case .success(let authorization):
-                                    if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-                                        Task { @MainActor in
-                                            let userIdentifier = appleIDCredential.user
-                                            let email = appleIDCredential.email
-                                            let fullName = appleIDCredential.fullName
-                                            
-                                            // 优先从 Apple 获取用户名（首次登录或再次登录时如果提供）
-                                            var name: String?
-                                            if let givenName = fullName?.givenName, let familyName = fullName?.familyName {
-                                                name = "\(givenName) \(familyName)"
-                                                print("✅ [SettingsView] 从 Apple 获取完整用户名: \(name!)")
-                                            } else if let givenName = fullName?.givenName {
-                                                name = givenName
-                                                print("✅ [SettingsView] 从 Apple 获取名字: \(name!)")
-                                            } else if let familyName = fullName?.familyName {
-                                                name = familyName
-                                                print("✅ [SettingsView] 从 Apple 获取姓氏: \(name!)")
-                                            } else {
-                                                print("⚠️ [SettingsView] Apple 未提供用户名（可能是再次登录）")
-                                            }
-                                            
-                                            // 如果 Apple 提供了名字，使用它；如果没有提供，尝试从本地读取已保存的名字
-                                            // 这样确保无论何时登录，都能读取到用户名
-                                            if name == nil || name?.isEmpty == true {
-                                                name = UserDefaults.standard.string(forKey: "userName")
-                                                if let name = name {
-                                                    print("📝 [SettingsView] 从本地读取已保存的用户名: \(name)")
+                        VStack(spacing: 8) {
+                            SignInWithAppleButton(
+                                onRequest: { request in
+                                    request.requestedScopes = [.fullName, .email]
+                                },
+                                onCompletion: { result in
+                                    switch result {
+                                    case .success(let authorization):
+                                        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+                                            Task { @MainActor in
+                                                let userIdentifier = appleIDCredential.user
+                                                let email = appleIDCredential.email
+                                                let fullName = appleIDCredential.fullName
+                                                
+                                                // 优先从 Apple 获取用户名（首次登录或再次登录时如果提供）
+                                                var name: String?
+                                                if let givenName = fullName?.givenName, let familyName = fullName?.familyName {
+                                                    name = "\(givenName) \(familyName)"
+                                                    print("✅ [SettingsView] 从 Apple 获取完整用户名: \(name!)")
+                                                } else if let givenName = fullName?.givenName {
+                                                    name = givenName
+                                                    print("✅ [SettingsView] 从 Apple 获取名字: \(name!)")
+                                                } else if let familyName = fullName?.familyName {
+                                                    name = familyName
+                                                    print("✅ [SettingsView] 从 Apple 获取姓氏: \(name!)")
                                                 } else {
-                                                    print("⚠️ [SettingsView] 本地也没有保存的用户名")
+                                                    print("⚠️ [SettingsView] Apple 未提供用户名（可能是再次登录）")
                                                 }
+                                                
+                                                // 如果 Apple 提供了名字，使用它；如果没有提供，尝试从本地读取已保存的名字
+                                                // 这样确保无论何时登录，都能读取到用户名
+                                                if name == nil || name?.isEmpty == true {
+                                                    name = UserDefaults.standard.string(forKey: "userName")
+                                                    if let name = name {
+                                                        print("📝 [SettingsView] 从本地读取已保存的用户名: \(name)")
+                                                    } else {
+                                                        print("⚠️ [SettingsView] 本地也没有保存的用户名")
+                                                    }
+                                                }
+                                                
+                                                // 保存用户信息（如果 Apple 提供了新名字，会更新保存；否则保持已保存的名字）
+                                                authManager.saveUserInfo(identifier: userIdentifier, email: email, name: name)
                                             }
-                                            
-                                            // 保存用户信息（如果 Apple 提供了新名字，会更新保存；否则保持已保存的名字）
-                                            authManager.saveUserInfo(identifier: userIdentifier, email: email, name: name)
+                                        }
+                                    case .failure(let error):
+                                        // 检查是否是用户取消
+                                        if let authError = error as? ASAuthorizationError,
+                                           authError.code == .canceled {
+                                            print("用户取消了登录")
+                                            // 不显示错误提示，因为这是用户主动取消
+                                        } else {
+                                            print("登录失败: \(error.localizedDescription)")
+                                            // 可以在这里添加用户友好的错误提示
                                         }
                                     }
-                                case .failure(let error):
-                                    // 检查是否是用户取消
-                                    if let authError = error as? ASAuthorizationError,
-                                       authError.code == .canceled {
-                                        print("用户取消了登录")
-                                        // 不显示错误提示，因为这是用户主动取消
-                                    } else {
-                                        print("登录失败: \(error.localizedDescription)")
-                                        // 可以在这里添加用户友好的错误提示
-                                    }
                                 }
-                            }
-                        )
-                        .frame(height: 50)
-                        .cornerRadius(10)
+                            )
+                            .frame(height: 50)
+                            .cornerRadius(10)
+                            
+                            Text(LocalizedKey.accountSignInDescription)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 4)
+                        }
                     }
                 } header: {
                     Text(LocalizedKey.account)
@@ -165,34 +192,25 @@ struct SettingsView: View {
                     NavigationLink {
                         DataSettingsView()
                     } label: {
-                        Label(LocalizedKey.data.rawValue.localized, systemImage: "square.and.arrow.up")
+                        Label(LocalizedKey.vocabularyData.rawValue.localized, systemImage: "square.and.arrow.up")
                     }
                 } header: {
-                    Text(LocalizedKey.data)
+                    Text(LocalizedKey.vocabularyData)
                 }
                 
-                // 订阅部分
+                // 应用设置部分
                 Section {
                     Button {
                         showPaywall = true
                     } label: {
                         HStack {
-                            Label("订阅会员", systemImage: "crown.fill")
-                                .foregroundColor(.primary)
+                            Label("settings_ai_usage".localized, systemImage: "sparkles")
                             Spacer()
-                            if entitlementManager.isSubscriptionActive {
-                                Text(entitlementManager.currentEntitlement == .pro ? "Pro" : "免费")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
+                            Text("\(usageTracker.remainingCalls)")
+                                .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("订阅")
-                }
-                
-                // 应用设置部分
-                Section {
+                    
                     NavigationLink {
                         AboutView()
                     } label: {
@@ -207,6 +225,22 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text(LocalizedKey.app)
+                } footer: {
+                    VStack(spacing: 8) {
+                        Link(destination: URL(string: "https://mooyu.cc/download.html")!) {
+                            Image("WebIcon")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 32, height: 32)
+                        }
+                        
+                        Link(LocalizedKey.developerWebsite.rawValue.localized, destination: URL(string: "https://mooyu.cc/download.html")!)
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 8)
                 }
             }
             .navigationTitle(LocalizedKey.settings.rawValue.localized)
@@ -226,6 +260,9 @@ struct SettingsView: View {
             } message: {
                 Text(LocalizedKey.signOutConfirm)
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
             .sheet(isPresented: $showEditNameSheet) {
                 EditUserNameView(
                     userName: $editingName,
@@ -237,9 +274,6 @@ struct SettingsView: View {
                         showEditNameSheet = false
                     }
                 )
-            }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView()
             }
             .preferredColorScheme(settingsManager.appearanceMode.colorScheme)
         }
@@ -338,6 +372,7 @@ struct EditUserNameView: View {
     let onCancel: () -> Void
     @FocusState private var isTextFieldFocused: Bool
     @State private var editedName: String
+    @ObservedObject private var settingsManager = AppSettingsManager.shared
     
     init(userName: Binding<String>, onSave: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
         self._userName = userName
@@ -350,19 +385,19 @@ struct EditUserNameView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("用户名", text: $editedName)
+                    TextField(LocalizedKey.userName.rawValue.localized, text: $editedName)
                         .focused($isTextFieldFocused)
                         .textInputAutocapitalization(.words)
                         .autocorrectionDisabled(false)
                 } header: {
-                    Text("用户名")
+                    Text(LocalizedKey.userName.rawValue.localized)
                 } footer: {
-                    Text("修改后的用户名将显示在应用中")
+                    Text(LocalizedKey.userNameDescription.rawValue.localized)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("编辑用户名")
+            .navigationTitle(LocalizedKey.editUserName.rawValue.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

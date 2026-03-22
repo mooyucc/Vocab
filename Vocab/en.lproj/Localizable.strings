@@ -21,7 +21,7 @@
 
 // MARK: - Tab Bar
 "tab_progress" = "Progress";
-"tab_study" = "Study";
+"tab_study" = "Learn";
 "tab_word_list" = "Word List";
 
 // MARK: - Home
@@ -33,8 +33,22 @@
 "to_learn" = "To Learn";
 "start_review" = "Start Review";
 "add_new_word" = "Add New Word";
-"recently_added" = "Recently Added";
 "view_all" = "View All";
+"vocabulary_energy" = "Vocabulary Energy";
+"vocabulary_energy_score_label" = "Energy score";
+"vocabulary_energy_tier_1_title" = "Sprout";
+"vocabulary_energy_tier_1_subtitle" = "Add words and review to charge your vocabulary energy.";
+"vocabulary_energy_tier_2_title" = "Growing";
+"vocabulary_energy_tier_2_subtitle" = "Keep reviewing—your memory gets stronger every time.";
+"vocabulary_energy_tier_3_title" = "Charging";
+"vocabulary_energy_tier_3_subtitle" = "Your word bank is leveling up. Stay consistent!";
+"vocabulary_energy_tier_4_title" = "Surging";
+"vocabulary_energy_tier_4_subtitle" = "You've built serious momentum. Push a little further!";
+"vocabulary_energy_tier_5_title" = "Peak";
+"vocabulary_energy_tier_5_subtitle" = "Amazing—you're a vocabulary champion!";
+"vocabulary_energy_next_hint" = "%d points to the next tier";
+"vocabulary_energy_last_7_days" = "Last 7 days";
+"vocabulary_energy_last_7_days_pending" = "Trend shows after 7 days of history";
 "no_words_yet" = "No Words Yet";
 "go_add_words" = "Go add some words to start learning!";
 "daily_motivation" = "Stay motivated and learn vocabulary today 💪";
@@ -43,17 +57,36 @@
 
 // MARK: - Settings
 "account" = "Account";
+"account_sign_in_description" = "Sign in with Apple to enable iCloud data sync";
 "general" = "General";
 "data" = "Data";
+"vocabulary_data" = "Vocabulary Data";
 "app" = "App";
 "about" = "About";
 "help" = "Help & Support";
 "sign_out" = "Sign Out";
 "sign_out_confirm" = "Are you sure you want to sign out? You will need to sign in again to sync data.";
-"language" = "Language";
+"language" = "Your Native Language";
+"target_language" = "Learning Language";
 "appearance" = "Appearance";
 "appearance_description" = "Choose the app's appearance mode. Follow system will automatically switch based on system settings.";
-"language_description" = "Choose the display language for the app interface";
+"language_description" = "Choose the display language for the app interface.";
+"target_language_description" = "Choose the learning target language. AI-generated explanations and translations will use this language.";
+"supplement_root_synonyms" = "Update Word Bank";
+"supplement_root_synonyms_description" = "Only update words that are missing content or whose example/root/synonyms/antonyms don't match the learning language (words that are complete and consistent are skipped to save API calls). Uses your current learning language.";
+"supplement_start" = "Start Update";
+"supplement_progress_format" = "Updating %d / %d";
+"supplement_completed" = "Update completed";
+"supplement_no_words" = "No words to update.";
+"supplement_no_update_needed" = "All words are complete and match the learning language. No update needed.";
+"supplement_api_calls_hint" = "About %d API calls will be used";
+"supplement_count_hint" = "Of %d words total, %d need update (missing content or language mismatch). About %d API calls will be used.";
+
+"supplement_section_header" = "Supplement";
+
+"appearance_mode_system" = "System";
+"appearance_mode_dark" = "Dark";
+"appearance_mode_light" = "Light";
 
 // MARK: - Add Word
 "word" = "Word";
@@ -62,6 +95,11 @@
 "pronunciation" = "Pronunciation";
 "example" = "Example";
 "translation" = "Translation";
+"root" = "Root";
+"root_placeholder" = "Word root / etymology (if any)";
+"synonyms_antonyms" = "Synonyms / Antonyms";
+"synonyms_placeholder" = "Synonyms / related words in English, comma-separated (if any)";
+"antonyms_placeholder" = "Antonyms in English, comma-separated (if any)";
 "word_sheet" = "Word Sheet";
 "word_sheet_description" = "Choose the group to add the word to. Default uses today's date.";
 "save_word" = "Save Word";
@@ -72,18 +110,25 @@
 "select_recognition_region" = "Select Recognition Region";
 "recognize_full_image" = "Recognize Full";
 "recognize_selected_region" = "Recognize Selected";
+"duplicate_word_title" = "Word Already Exists";
+"duplicate_word_message" = "The word \"%@\" already exists in this word sheet. Do you want to add it anyway?";
+"skip" = "Skip";
+"add_anyway" = "Add Anyway";
 
 // MARK: - Study
 "focus_mode" = "Focus Mode";
 "recommended_review" = "Recommended Review";
-"recommended_review_description" = "Intelligently recommend words to review from all word banks based on Ebbinghaus forgetting curve";
+"recommended_review_description" = "Recommends words to review using the Ebbinghaus forgetting curve";
 "recommended_review_completed" = "Recommended review completed\nGo add some new words!";
+"recommended_review_empty_no_words" = "No words in your library yet. Add words or check iCloud sync.";
+"recommended_review_empty_all_unlearned" = "No mastered words yet for spaced review. Use Review All or Continue Last to learn words first.";
+"recommended_review_empty_no_due" = "No words are due for review yet. Try again tomorrow, or use Review All below.";
 "review_all" = "Review All";
-"review_all_description" = "Review all remembered and forgotten words again";
+"review_all_description" = "Review all words in your word banks";
 "continue_last" = "Continue Last";
-"continue_last_description" = "Review forgotten and unreviewed words";
+"continue_last_description" = "Review forgotten and newly added words";
 "forgot" = "Forgot";
-"remembered" = "Remembered";
+"remembered" = "Got";
 "daily_goal" = "Daily Goal";
 "click_to_flip" = "Tap to flip and see definition";
 "question" = "Question";
@@ -114,6 +159,8 @@
 "add_failed" = "Add Failed";
 "no_words_recognized_error" = "No words recognized. Please ensure the image contains clear English text.";
 "recognize_failed" = "Recognition failed: %@";
+"batch_add_completed" = "Batch Add Completed";
+"batch_add_completed_message" = "Successfully added %d words. %d duplicate words were skipped.";
 
 // MARK: - Data Settings
 "local_data" = "Local Data";
@@ -130,6 +177,15 @@
 "export_success" = "Export Success";
 "import_success" = "Import Success";
 "import_failed" = "Import Failed";
+"export_csv" = "Export as CSV";
+"export_csv_description" = "Export selected word sheets as CSV file";
+"select_sheets_to_export" = "Select Sheets to Export";
+"select_all" = "Select All";
+"deselect_all" = "Deselect All";
+"no_sheets_selected" = "Please select at least one sheet";
+"no_words_in_selected_sheets" = "No words in selected sheets";
+"import_csv_file" = "Import Local CSV File";
+"export_csv_file" = "Export as CSV File";
 
 // MARK: - Word List
 "my_word_list" = "My Word List";
@@ -143,6 +199,40 @@
 "updates" = "Updates";
 "core_features" = "Core Features";
 "version_history" = "Version History";
+"software_license" = "Software License and Service Agreement";
+"privacy_policy" = "Privacy Policy";
+"copyright" = "MooyuNet Copyright © 2025";
+"developer_website" = "Visit developer website for more apps: Mooyu.cc";
+"apple_user" = "Apple User";
+"user_name" = "User Name";
+"user_name_description" = "The modified user name will be displayed in the app";
+"edit_user_name" = "Edit User Name";
+
+// MARK: - Features
+"word_management" = "Word Management";
+"word_management_description" = "Easily add, edit, and manage your word library with support for custom word categories.";
+"intelligent_learning" = "Intelligent Learning";
+"intelligent_learning_description" = "AI-assisted word entry, automatically generating definitions, example sentences, and pronunciations for more efficient learning.";
+"camera_recognition_feature" = "Camera Recognition";
+"camera_recognition_description" = "Use the camera to recognize words and quickly add new vocabulary to your learning list.";
+"learning_progress" = "Learning Progress";
+"learning_progress_description" = "Track learning progress in real-time, view statistics of mastered and words to learn.";
+"review_system" = "Review System";
+"review_system_description" = "Intelligent review algorithm helps you consolidate memory and improve learning efficiency.";
+"first_release" = "First Release";
+"support_word_add" = "Support word addition and management";
+"ai_smart_fill_feature" = "AI Smart Fill";
+"camera_recognize_feature" = "Camera word recognition feature";
+"progress_tracking" = "Learning progress tracking";
+"review_system_feature" = "Review system";
+"version_date_format" = "January 2025";
+"version_update_2_4_date" = "March 22, 2025";
+"version_update_2_4_recommended_review" = "Recommended review: improved filtering and sorting so your due list better matches memory patterns and study progress.";
+"version_update_2_4_progress_tab" = "Progress tab: new Vocabulary Energy (total score, tier and progress to the next tier, 7-day change); cleaner layout with a prominent Start Review shortcut to Learn.";
+"version_update_2_4_study_ui" = "Study & flashcards: refinements to review flow, flashcards, and word list.";
+"version_update_2_4_settings_data" = "Settings & data: layout and usability tweaks on settings and data screens.";
+"version_update_2_4_ai_paywall" = "AI & purchases: clearer AI usage prompts and paywall / purchase flow tweaks.";
+"version_update_2_4_stability" = "Stability: bug fixes and minor performance improvements.";
 
 // MARK: - Errors
 "unknown_error" = "Unknown Error";
@@ -174,3 +264,33 @@
 "privacy_url" = "https://example.com/privacy";
 "onboarding_complete" = "Get Started";
 "membership_status_lifetime_active" = "Lifetime Active";
+"trial_7_days" = "7-Day Free Trial";
+"trial_days" = "%d-Day Free Trial";
+"trial_weeks" = "%d-Week Free Trial";
+"trial_months" = "%d-Month Free Trial";
+"trial_years" = "%d-Year Free Trial";
+"trial_free" = "Free Trial";
+"then" = "then";
+
+// MARK: - Usage & Paywall
+"usage_no_calls_remaining" = "No remaining calls";
+"usage_one_call_remaining" = "1 call remaining";
+"usage_calls_remaining" = "%d calls remaining";
+"usage_remaining" = "Remaining";
+"usage_total_used" = "Used";
+"usage_stats" = "Used %d times, %d remaining";
+"usage_purchase_title" = "Purchase Calls";
+"usage_purchase_calls" = "%d AI Calls";
+"usage_price_format" = "$%.2f";
+"usage_purchase_description" = "Each purchase gives you %d AI API calls";
+"usage_purchase_note" = "Calls never expire and are valid permanently";
+"usage_consumption_info" = "The following actions consume AI calls:";
+"usage_consumption_ai_fill" = "Each AI word fill consumes 1 call";
+"usage_consumption_ai_example" = "Each AI example update consumes 1 call";
+"free_trial_welcome_title" = "You've Got Free Credits";
+"free_trial_welcome_message" = "You've received %d free AI calls for word fill, example updates, and more.";
+"free_trial_welcome_button" = "Got it";
+"paywall_usage_title" = "AI Call Credits";
+"paywall_usage_subtitle" = "Purchase more credits to continue using AI features";
+"settings_ai_usage" = "Purchase";
+"error" = "Error";

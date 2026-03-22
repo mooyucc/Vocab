@@ -10,6 +10,7 @@ import SwiftData
 
 struct ContentView: View {
     @State private var selectedTab: AppView = .home
+    @State private var showFreeTrialWelcome = false
     @ObservedObject private var localizedString = LocalizedString.shared
 
     var body: some View {
@@ -36,6 +37,17 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
         .background(Color(.systemGroupedBackground))
         .applyTabViewStyle()
+        .onAppear {
+            _ = UsageTracker.shared
+            if UsageTracker.shouldShowFreeTrialWelcome {
+                showFreeTrialWelcome = true
+            }
+        }
+        .sheet(isPresented: $showFreeTrialWelcome) {
+            FreeTrialWelcomeView(onDismiss: {
+                showFreeTrialWelcome = false
+            })
+        }
     }
 }
 

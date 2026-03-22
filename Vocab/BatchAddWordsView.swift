@@ -13,14 +13,18 @@ struct BatchAddWordsView: View {
     @Environment(\.dismiss) private var dismiss
     
     @Query(sort: \WordSheet.createdAt, order: .reverse) private var allSheets: [WordSheet]
+    @Query private var words: [Word]
     
     let recognizedWords: [String]
     @State private var selectedWords: Set<String> = []
     @State private var selectedSheetId: UUID?
     @State private var isProcessing: Bool = false
     @State private var processedCount: Int = 0
+    @State private var skippedCount: Int = 0
     @State private var errorMessage: String?
     @State private var showError: Bool = false
+    @State private var showSkipAlert: Bool = false
+    @State private var showPaywall: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -143,6 +147,16 @@ struct BatchAddWordsView: View {
             } message: {
                 Text(errorMessage ?? LocalizedKey.unknownError.rawValue.localized)
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
+            .alert(LocalizedKey.batchAddCompleted.rawValue.localized, isPresented: $showSkipAlert) {
+                Button(LocalizedKey.ok.rawValue.localized, role: .cancel) {
+                    dismiss()
+                }
+            } message: {
+                Text(String(format: LocalizedKey.batchAddCompletedMessage.rawValue.localized, processedCount - skippedCount, skippedCount))
+            }
             .onAppear {
                 // 默认选择所有单词
                 selectedWords = Set(recognizedWords)
@@ -191,6 +205,7 @@ struct BatchAddWordsView: View {
         
         isProcessing = true
         processedCount = 0
+        skippedCount = 0
         
         // 如果未选择 sheet，使用今天的 sheet
         let sheet = selectedSheet ?? getOrCreateTodaySheet()
@@ -201,6 +216,21 @@ struct BatchAddWordsView: View {
             for word in wordsToAdd {
                 await MainActor.run {
                     processedCount += 1
+                }
+                
+                // 检查是否重复
+                let normalizedTerm = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let isDuplicate = words.contains { existingWord in
+                    existingWord.sheet?.id == sheet.id &&
+                    existingWord.term.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedTerm
+                }
+                
+                if isDuplicate {
+                    // 跳过重复的单词
+                    await MainActor.run {
+                        skippedCount += 1
+                    }
+                    continue
                 }
                 
                 do {
@@ -221,19 +251,29 @@ struct BatchAddWordsView: View {
                         modelContext.insert(newWord)
                     }
                 } catch {
-                    // 如果AI填充失败，使用空值创建单词
-                    await MainActor.run {
-                        let newWord = Word(
-                            term: word,
-                            definition: "",
-                            partOfSpeech: "",
-                            pronunciation: "",
-                            example: "",
-                            exampleCn: "",
-                            sheet: sheet
-                        )
-                        
-                        modelContext.insert(newWord)
+                    // 检查是否是次数不足的错误
+                    if let serviceError = error as? DeepseekServiceError,
+                       case .noRemainingCalls = serviceError {
+                        await MainActor.run {
+                            showPaywall = true
+                            isProcessing = false
+                        }
+                        return // 停止批量添加
+                    } else {
+                        // 如果AI填充失败，使用空值创建单词
+                        await MainActor.run {
+                            let newWord = Word(
+                                term: word,
+                                definition: "",
+                                partOfSpeech: "",
+                                pronunciation: "",
+                                example: "",
+                                exampleCn: "",
+                                sheet: sheet
+                            )
+                            
+                            modelContext.insert(newWord)
+                        }
                     }
                 }
                 
@@ -245,7 +285,13 @@ struct BatchAddWordsView: View {
                 do {
                     try modelContext.save()
                     isProcessing = false
-                    dismiss()
+                    
+                    // 如果有跳过的单词，显示提示
+                    if skippedCount > 0 {
+                        showSkipAlert = true
+                    } else {
+                        dismiss()
+                    }
                 } catch {
                     isProcessing = false
                     errorMessage = String(format: "保存失败: %@", error.localizedDescription)

@@ -14,14 +14,14 @@ struct AboutView: View {
         if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
             return version
         }
-        return "1.0"
+        return "2.3"
     }
     
     var buildNumber: String {
         if let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
             return build
         }
-        return "1"
+        return "10"
     }
     
     var body: some View {
@@ -30,24 +30,19 @@ struct AboutView: View {
             Section {
                 VStack(spacing: 16) {
                     // 应用图标
-                    Image(systemName: "book.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.indigo, Color.purple]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    Image("AppIconImage")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
                         .frame(width: 100, height: 100)
                         .background(
                             RoundedRectangle(cornerRadius: 22, style: .continuous)
                                 .fill(Color(.systemBackground))
                                 .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
                         )
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     
                     // 应用名称
-                    Text("Vocab")
+                    Text("Vocab Ai")
                         .font(.title)
                         .fontWeight(.bold)
                     
@@ -77,19 +72,20 @@ struct AboutView: View {
             
             // 法律信息部分
             Section {
-                Link("《软件许可及服务协议》", destination: URL(string: "https://example.com/terms")!)
+                Link(LocalizedKey.softwareLicense.rawValue.localized, destination: URL(string: "https://mooyu.cc/moovocablicense.html")!)
                     .foregroundStyle(.blue)
                 
-                Link("《隐私保护指引》", destination: URL(string: "https://example.com/privacy")!)
+                Link(LocalizedKey.privacyPolicy.rawValue.localized, destination: URL(string: "https://mooyu.cc/moovocabprivacy.html")!)
                     .foregroundStyle(.blue)
             } footer: {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Vocab 版权所有 © 2025")
+                VStack(alignment: .center, spacing: 8) {
+                    Text(LocalizedKey.copyright.rawValue.localized)
                         .foregroundStyle(.secondary)
                     Text("All Rights Reserved")
                         .foregroundStyle(.secondary)
                         .font(.caption)
                 }
+                .frame(maxWidth: .infinity)
             }
         }
         .navigationTitle(LocalizedKey.about.rawValue.localized)
@@ -105,32 +101,32 @@ struct FeatureIntroductionView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     FeatureItem(
                         icon: "book.fill",
-                        title: "单词管理",
-                        description: "轻松添加、编辑和管理您的单词库，支持自定义词库分类。"
+                        title: LocalizedKey.wordManagement.rawValue.localized,
+                        description: LocalizedKey.wordManagementDescription.rawValue.localized
                     )
                     
                     FeatureItem(
                         icon: "brain.head.profile",
-                        title: "智能学习",
-                        description: "AI 辅助录入单词，自动生成释义、例句和发音，让学习更高效。"
+                        title: LocalizedKey.intelligentLearning.rawValue.localized,
+                        description: LocalizedKey.intelligentLearningDescription.rawValue.localized
                     )
                     
                     FeatureItem(
                         icon: "camera.fill",
-                        title: "拍照识别",
-                        description: "使用相机拍照识别单词，快速添加新词汇到您的学习列表。"
+                        title: LocalizedKey.cameraRecognition.rawValue.localized,
+                        description: LocalizedKey.cameraRecognitionDescription.rawValue.localized
                     )
                     
                     FeatureItem(
                         icon: "chart.line.uptrend.xyaxis",
-                        title: "学习进度",
-                        description: "实时跟踪学习进度，查看已掌握和待学习的单词统计。"
+                        title: LocalizedKey.learningProgress.rawValue.localized,
+                        description: LocalizedKey.learningProgressDescription.rawValue.localized
                     )
                     
                     FeatureItem(
                         icon: "arrow.triangle.2.circlepath",
-                        title: "复习系统",
-                        description: "智能复习算法，帮助您巩固记忆，提高学习效率。"
+                        title: LocalizedKey.reviewSystem.rawValue.localized,
+                        description: LocalizedKey.reviewSystemDescription.rawValue.localized
                     )
                 }
                 .padding(.vertical, 8)
@@ -172,15 +168,27 @@ struct VersionUpdateView: View {
         Form {
             Section {
                 VersionItem(
-                    version: "1.0",
-                    date: "2025年1月",
+                    version: "2.4",
+                    date: LocalizedKey.versionUpdate24Date.rawValue.localized,
                     updates: [
-                        "首次发布",
-                        "支持单词添加和管理",
-                        "AI 智能辅助录入",
-                        "拍照识别单词功能",
-                        "学习进度跟踪",
-                        "复习系统"
+                        LocalizedKey.versionUpdate24RecommendedReview.rawValue.localized,
+                        LocalizedKey.versionUpdate24ProgressTab.rawValue.localized,
+                        LocalizedKey.versionUpdate24StudyUI.rawValue.localized,
+                        LocalizedKey.versionUpdate24SettingsData.rawValue.localized,
+                        LocalizedKey.versionUpdate24AIPaywall.rawValue.localized,
+                        LocalizedKey.versionUpdate24Stability.rawValue.localized
+                    ]
+                )
+                VersionItem(
+                    version: "2.3",
+                    date: LocalizedKey.versionDateFormat.rawValue.localized,
+                    updates: [
+                        LocalizedKey.firstRelease.rawValue.localized,
+                        LocalizedKey.supportWordAdd.rawValue.localized,
+                        LocalizedKey.aiSmartFillFeature.rawValue.localized,
+                        LocalizedKey.cameraRecognizeFeature.rawValue.localized,
+                        LocalizedKey.progressTracking.rawValue.localized,
+                        LocalizedKey.reviewSystemFeature.rawValue.localized
                     ]
                 )
             } header: {

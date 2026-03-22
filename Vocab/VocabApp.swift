@@ -14,8 +14,6 @@ struct VocabApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var settingsManager = AppSettingsManager.shared
     @StateObject private var authManager = AuthenticationManager.shared
-    @StateObject private var purchaseManager = PurchaseManager.shared
-    @StateObject private var entitlementManager = EntitlementManager.shared
     @StateObject private var brandColorManager = BrandColorManager.shared
     
     init() {
@@ -82,8 +80,6 @@ struct VocabApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(authManager)
-                .environmentObject(purchaseManager)
-                .environmentObject(entitlementManager)
                 .environmentObject(brandColorManager)
                 .preferredColorScheme(settingsManager.appearanceMode.colorScheme)
                 .onAppear {

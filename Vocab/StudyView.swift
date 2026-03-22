@@ -21,7 +21,7 @@ struct StudyView: View {
     
     @State private var forgottenWordIds: Set<UUID> = []
     @State private var showReviewAlert = false
-    @State private var selectedSheetId: UUID?
+    @State private var selectedSheetIds: Set<UUID> = []
     @State private var showSheetPicker = false
     @State private var reviewModeSelected: Bool = false
     @State private var reviewMode: ReviewMode?
@@ -30,10 +30,15 @@ struct StudyView: View {
     
     // 根据选中的 sheet 过滤单词
     private var filteredWords: [Word] {
-        if let sheetId = selectedSheetId {
-            return words.filter { $0.sheet?.id == sheetId }
-        } else {
+        if selectedSheetIds.isEmpty {
             return words
+        } else {
+            return words.filter { word in
+                if let sheetId = word.sheet?.id {
+                    return selectedSheetIds.contains(sheetId)
+                }
+                return false
+            }
         }
     }
     
@@ -52,58 +57,84 @@ struct StudyView: View {
         filteredWords.filter { !$0.learned }
     }
     
+    /// 「接着上次复习」与 `startReview(mode: .continueLast)` 使用同一队列逻辑
+    private var continueLastQueueWords: [Word] {
+        filteredWords.filter { !$0.learned || forgottenWordIds.contains($0.id) }
+    }
+    
     // 根据艾宾浩斯遗忘曲线筛选需要复习的单词（不区分sheet，从全部词库筛选）
+    /// 仅对已「记住了」的词；间隔只看「推荐复习」内累计（spacedLastReviewed / spacedReviewCount），与复习全部无关。
     private var recommendedReviewWords: [Word] {
         let now = Date()
         let calendar = Calendar.current
         
         return words.filter { word in
-            // 如果从未复习过，需要复习
-            guard let lastReviewed = word.lastReviewed else {
+            guard word.learned else { return false }
+            
+            // 尚未在推荐复习中完成过「记住了」：可进入推荐复习首轮，不参与间隔筛选
+            guard let spacedLast = word.spacedLastReviewed else {
                 return true
             }
             
-            // 计算距离上次复习的天数
-            let daysSinceReview = calendar.dateComponents([.day], from: lastReviewed, to: now).day ?? 0
-            
-            // 根据复习次数确定复习间隔（艾宾浩斯遗忘曲线）
-            // 第1次复习：1天后
-            // 第2次复习：3天后
-            // 第3次复习：7天后
-            // 第4次复习：15天后
-            // 第5次复习：30天后
-            // 之后：每30天复习一次
-            let reviewCount = word.reviewCount
-            let interval: Int
-            
-            switch reviewCount {
-            case 0:
-                interval = 0  // 从未复习过，立即需要复习
-            case 1:
-                interval = 1
-            case 2:
-                interval = 3
-            case 3:
-                interval = 7
-            case 4:
-                interval = 15
-            case 5:
-                interval = 30
-            default:
-                interval = 30  // 5次以上，每30天复习一次
-            }
-            
-            // 如果距离上次复习的天数 >= 间隔天数，则需要复习
-            return daysSinceReview >= interval
+            let daysSinceSpaced = calendar.dateComponents([.day], from: spacedLast, to: now).day ?? 0
+            let interval = Self.ebbinghausIntervalDays(forSpacedCount: word.spacedReviewCount)
+            return daysSinceSpaced >= interval
+        }
+    }
+    
+    /// 艾宾浩斯间隔（天）：`count` 为在推荐复习中累计「记住了」的次数（更新后的当前值）
+    private static func ebbinghausIntervalDays(forSpacedCount count: Int) -> Int {
+        switch count {
+        case 0: return 0
+        case 1: return 1
+        case 2: return 3
+        case 3: return 7
+        case 4: return 15
+        case 5: return 30
+        default: return 30
         }
     }
     
     private var selectedSheetName: String {
-        if let sheetId = selectedSheetId,
+        if selectedSheetIds.isEmpty {
+            return LocalizedKey.allSheets.rawValue.localized
+        }
+        if selectedSheetIds.count == 1,
+           let sheetId = selectedSheetIds.first,
            let sheet = sheetsWithWords.first(where: { $0.id == sheetId }) {
             return sheet.localizedDisplayName
         }
-        return LocalizedKey.allSheets.rawValue.localized
+        return LocalizedKey.wordSheet.rawValue.localized
+    }
+    
+    /// 推荐复习不可用时展示的说明（与 `recommendedReviewAccessibilityLabel` 一致）
+    private var recommendedReviewEmptyHintKey: LocalizedKey {
+        if words.isEmpty { return .recommendedReviewEmptyNoWords }
+        if !words.contains(where: \.learned) { return .recommendedReviewEmptyAllUnlearned }
+        return .recommendedReviewEmptyNoDue
+    }
+    
+    /// 推荐复习按钮的无障碍标签（禁用时附带原因说明）
+    private var recommendedReviewAccessibilityLabel: String {
+        let title = LocalizedKey.recommendedReview.rawValue.localized
+        let countPart = "\(recommendedReviewWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)"
+        if recommendedReviewWords.isEmpty {
+            let reason = recommendedReviewEmptyHintKey.rawValue.localized
+            return "\(title)，\(countPart)。\(reason)"
+        }
+        return "\(title)，\(countPart)"
+    }
+    
+    /// 专注模式「选择复习方式」：三张卡片均分可用高度
+    private enum ReviewModeCardLayout {
+        static let iconSize: CGFloat = 40
+        static let contentSpacing: CGFloat = 8
+        static let innerVerticalPadding: CGFloat = 12
+        static let horizontalPadding: CGFloat = 20
+        static let betweenCards: CGFloat = 10
+        static let screenHorizontalInset: CGFloat = 24
+        static let screenVerticalMargin: CGFloat = 8
+        static let cornerRadius: CGFloat = 18
     }
     
     var body: some View {
@@ -150,7 +181,7 @@ struct StudyView: View {
         .sheet(isPresented: $showSheetPicker) {
             SheetPickerView(
                 sheets: sheetsWithWords,
-                selectedSheetId: $selectedSheetId
+                selectedSheetIds: $selectedSheetIds
             )
         }
         .background(Color(.systemGroupedBackground))
@@ -178,17 +209,21 @@ struct StudyView: View {
     
     // MARK: - Review Mode Selection View
     private var reviewModeSelectionView: some View {
-        VStack(spacing: 24) {
-            Spacer()
+        GeometryReader { proxy in
+            let gap = ReviewModeCardLayout.betweenCards
+            let vm = ReviewModeCardLayout.screenVerticalMargin
+            let usableHeight = max(0, proxy.size.height - vm * 2)
+            let cardHeight = (usableHeight - gap * 2) / 3
             
-            VStack(spacing: 32) {
+            VStack(spacing: gap) {
                 Button(action: {
                     guard !isStartingReview else { return }
                     startReview(mode: .recommendedReview)
                 }) {
-                    VStack(spacing: 12) {
+                    VStack(spacing: ReviewModeCardLayout.contentSpacing) {
+                        Spacer(minLength: 0)
                         Image(systemName: "brain.head.profile")
-                            .font(.system(size: 48))
+                            .font(.system(size: ReviewModeCardLayout.iconSize))
                             .foregroundStyle(.purple)
                         Text(LocalizedKey.recommendedReview)
                             .font(.headline)
@@ -197,22 +232,37 @@ struct StudyView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                         if !recommendedReviewWords.isEmpty {
                             Text("\(recommendedReviewWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
-                                .padding(.top, 4)
                         }
+                        if recommendedReviewWords.isEmpty && !isStartingReview {
+                            Text(recommendedReviewEmptyHintKey)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityHidden(true)
+                        }
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 32)
-                    .padding(.horizontal, 24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.vertical, ReviewModeCardLayout.innerVerticalPadding)
+                    .padding(.horizontal, ReviewModeCardLayout.horizontalPadding)
                     .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+                    .clipShape(RoundedRectangle(cornerRadius: ReviewModeCardLayout.cornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ReviewModeCardLayout.cornerRadius, style: .continuous)
+                            .stroke(Color(.separator).opacity(0.2), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 4)
+                    .shadow(color: .black.opacity(0.06), radius: 2, x: 0, y: 1)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(LocalizedKey.recommendedReview.rawValue.localized)，\(recommendedReviewWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)")
+                .frame(maxWidth: .infinity, minHeight: cardHeight, maxHeight: cardHeight)
+                .accessibilityLabel(recommendedReviewAccessibilityLabel)
                 .disabled(recommendedReviewWords.isEmpty || isStartingReview)
                 .opacity(recommendedReviewWords.isEmpty || isStartingReview ? 0.5 : 1.0)
                 
@@ -220,9 +270,10 @@ struct StudyView: View {
                     guard !isStartingReview else { return }
                     startReview(mode: .reviewAll)
                 }) {
-                    VStack(spacing: 12) {
+                    VStack(spacing: ReviewModeCardLayout.contentSpacing) {
+                        Spacer(minLength: 0)
                         Image(systemName: "arrow.clockwise.circle.fill")
-                            .font(.system(size: 48))
+                            .font(.system(size: ReviewModeCardLayout.iconSize))
                             .foregroundStyle(.blue)
                         Text(LocalizedKey.reviewAll)
                             .font(.headline)
@@ -231,16 +282,35 @@ struct StudyView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if !filteredWords.isEmpty {
+                            Text("\(filteredWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 32)
-                    .padding(.horizontal, 24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.vertical, ReviewModeCardLayout.innerVerticalPadding)
+                    .padding(.horizontal, ReviewModeCardLayout.horizontalPadding)
                     .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+                    .clipShape(RoundedRectangle(cornerRadius: ReviewModeCardLayout.cornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ReviewModeCardLayout.cornerRadius, style: .continuous)
+                            .stroke(Color(.separator).opacity(0.2), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 4)
+                    .shadow(color: .black.opacity(0.06), radius: 2, x: 0, y: 1)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(LocalizedKey.reviewAll.rawValue.localized)，\(LocalizedKey.reviewAllDescription.rawValue.localized)")
+                .frame(maxWidth: .infinity, minHeight: cardHeight, maxHeight: cardHeight)
+                .accessibilityLabel({
+                    let title = LocalizedKey.reviewAll.rawValue.localized
+                    let desc = LocalizedKey.reviewAllDescription.rawValue.localized
+                    guard !filteredWords.isEmpty else { return "\(title)，\(desc)" }
+                    let countPart = "\(filteredWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)"
+                    return "\(title)，\(countPart)。\(desc)"
+                }())
                 .disabled(isStartingReview)
                 .opacity(isStartingReview ? 0.5 : 1.0)
                 
@@ -248,9 +318,10 @@ struct StudyView: View {
                     guard !isStartingReview else { return }
                     startReview(mode: .continueLast)
                 }) {
-                    VStack(spacing: 12) {
+                    VStack(spacing: ReviewModeCardLayout.contentSpacing) {
+                        Spacer(minLength: 0)
                         Image(systemName: "play.circle.fill")
-                            .font(.system(size: 48))
+                            .font(.system(size: ReviewModeCardLayout.iconSize))
                             .foregroundStyle(.green)
                         Text(LocalizedKey.continueLast)
                             .font(.headline)
@@ -259,22 +330,41 @@ struct StudyView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if !continueLastQueueWords.isEmpty {
+                            Text("\(continueLastQueueWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 32)
-                    .padding(.horizontal, 24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.vertical, ReviewModeCardLayout.innerVerticalPadding)
+                    .padding(.horizontal, ReviewModeCardLayout.horizontalPadding)
                     .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+                    .clipShape(RoundedRectangle(cornerRadius: ReviewModeCardLayout.cornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ReviewModeCardLayout.cornerRadius, style: .continuous)
+                            .stroke(Color(.separator).opacity(0.2), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 4)
+                    .shadow(color: .black.opacity(0.06), radius: 2, x: 0, y: 1)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(LocalizedKey.continueLast.rawValue.localized)，\(LocalizedKey.continueLastDescription.rawValue.localized)")
+                .frame(maxWidth: .infinity, minHeight: cardHeight, maxHeight: cardHeight)
+                .accessibilityLabel({
+                    let title = LocalizedKey.continueLast.rawValue.localized
+                    let desc = LocalizedKey.continueLastDescription.rawValue.localized
+                    guard !continueLastQueueWords.isEmpty else { return "\(title)，\(desc)" }
+                    let countPart = "\(continueLastQueueWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)"
+                    return "\(title)，\(countPart)。\(desc)"
+                }())
                 .disabled(isStartingReview)
                 .opacity(isStartingReview ? 0.5 : 1.0)
             }
-            .padding(.horizontal, 40)
-            
-            Spacer()
+            .padding(.horizontal, ReviewModeCardLayout.screenHorizontalInset)
+            .padding(.vertical, vm)
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -319,28 +409,6 @@ struct StudyView: View {
                             .font(.system(size: 64))
                             .foregroundStyle(.tint.opacity(0.3))
                         Text("太棒了！推荐复习完成")
-                            .font(.headline)
-                        Text(LocalizedKey.goAddNewWords)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            } else if reviewMode == .recommendedReview {
-                // 推荐复习模式完成
-                if #available(iOS 17.0, *) {
-                    ContentUnavailableView {
-                        Label("太棒了！", systemImage: "face.smiling")
-                    } description: {
-                        Text(LocalizedKey.recommendedReviewCompleted)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    VStack(spacing: 16) {
-                        Image(systemName: "face.smiling")
-                            .font(.system(size: 64))
-                            .foregroundStyle(.tint.opacity(0.3))
-                        Text("太棒了！推荐复习已完成")
                             .font(.headline)
                         Text(LocalizedKey.goAddNewWords)
                             .font(.caption)
@@ -453,13 +521,22 @@ struct StudyView: View {
                     // 忘记了：加入"忘记了"列表，但不重新加入队列
                     // 每个单词在这一轮中只出现一次，不要循环
                     forgottenWordIds.insert(wordId)
-                    // 在"复习全部"模式下，即使忘记了也不标记为已学，以便后续可以再次复习
-                    if reviewMode == .reviewAll {
-                        word.learned = false
-                    }
+                    // 未记住：一律标记为未学，使其不再进入「推荐复习」，可通过「复习全部」「接着上次」巩固
+                    word.learned = false
                 }
                 word.reviewCount += 1
                 word.lastReviewed = Date()
+                
+                // 遗忘曲线仅跟踪「推荐复习」内的「记住了」；复习全部/接着上次不改变 spaced 字段
+                if reviewMode == .recommendedReview {
+                    if remembered {
+                        word.spacedReviewCount += 1
+                        word.spacedLastReviewed = Date()
+                    } else {
+                        word.spacedReviewCount = 0
+                        word.spacedLastReviewed = nil
+                    }
+                }
                 
                 // 当所有单词都过完一遍后（队列为空），直接返回到选择界面
                 if sessionQueue.isEmpty {
@@ -508,7 +585,7 @@ struct StudyView: View {
                 // 复习全部：清空忘记列表，重新开始
                 forgottenWordIds.removeAll()
             case .continueLast:
-                sessionQueue = filteredWords.filter { !$0.learned || forgottenWordIds.contains($0.id) }
+                sessionQueue = continueLastQueueWords
             case .recommendedReview:
                 // 推荐复习：使用全部词库中根据记忆曲线筛选的单词（不区分sheet）
                 sessionQueue = recommendedReviewWords

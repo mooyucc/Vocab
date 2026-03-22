@@ -1,0 +1,291 @@
+/* 
+ Localizable.strings (Français)
+ Vocab
+*/
+
+// MARK: - Common
+"settings" = "Réglages";
+"done" = "Terminé";
+"cancel" = "Annuler";
+"confirm" = "Confirmer";
+"save" = "Enregistrer";
+"delete" = "Supprimer";
+"ok" = "OK";
+"yes" = "Oui";
+"no" = "Non";
+"close" = "Fermer";
+"loading" = "Chargement";
+"retry" = "Réessayer";
+
+// MARK: - Tab Bar
+"tab_progress" = "Progression";
+"tab_study" = "Apprendre";
+"tab_word_list" = "Liste de mots";
+
+// MARK: - Home
+"good_morning" = "Bonjour, ";
+"good_afternoon" = "Bon après-midi, ";
+"good_evening" = "Bonsoir, ";
+"total_progress" = "Progression totale";
+"mastered" = "Maîtrisés";
+"to_learn" = "À apprendre";
+"start_review" = "Commencer la révision";
+"add_new_word" = "Ajouter un mot";
+"view_all" = "Tout afficher";
+"vocabulary_energy" = "Énergie vocabulaire";
+"vocabulary_energy_score_label" = "Score d’énergie";
+"vocabulary_energy_tier_1_title" = "Germination";
+"vocabulary_energy_tier_1_subtitle" = "Ajoutez des mots et révisez pour charger votre énergie.";
+"vocabulary_energy_tier_2_title" = "Croissance";
+"vocabulary_energy_tier_2_subtitle" = "Continuez à réviser : la mémoire se renforce à chaque fois.";
+"vocabulary_energy_tier_3_title" = "Charge";
+"vocabulary_energy_tier_3_subtitle" = "Votre lexique se renforce. Gardez le rythme !";
+"vocabulary_energy_tier_4_title" = "Élan";
+"vocabulary_energy_tier_4_subtitle" = "Vous avez pris une belle avance. Encore un effort !";
+"vocabulary_energy_tier_5_title" = "Sommet";
+"vocabulary_energy_tier_5_subtitle" = "Bravo ! Vous êtes un champion du vocabulaire.";
+"vocabulary_energy_next_hint" = "Encore %d points pour le palier suivant";
+"vocabulary_energy_last_7_days" = "7 derniers jours";
+"vocabulary_energy_last_7_days_pending" = "La tendance s’affiche après 7 jours d’historique";
+"no_words_yet" = "Aucun mot pour le moment";
+"go_add_words" = "Ajoutez des mots pour commencer à apprendre !";
+"daily_motivation" = "Restez motivé et apprenez du vocabulaire aujourd'hui 💪";
+"words_to_review" = " mots à réviser";
+"ai_smart_fill" = "Remplissage intelligent par IA";
+
+// MARK: - Settings
+"account" = "Compte";
+"account_sign_in_description" = "Connectez-vous avec Apple pour activer la synchronisation iCloud.";
+"general" = "Général";
+"data" = "Données";
+"vocabulary_data" = "Données de vocabulaire";
+"app" = "Application";
+"about" = "À propos";
+"help" = "Aide et support";
+"sign_out" = "Déconnexion";
+"sign_out_confirm" = "Voulez-vous vraiment vous déconnecter ? Vous devrez vous reconnecter pour synchroniser vos données.";
+"language" = "Langue maternelle";
+"appearance" = "Apparence";
+"appearance_description" = "Choisissez le mode d'apparence de l'application. « Suivre le système » changera automatiquement selon les réglages du système.";
+"supplement_root_synonyms" = "Mettre à jour le vocabulaire";
+"supplement_root_synonyms_description" = "Met à jour uniquement les mots dont le contenu est incomplet ou dont l'exemple, la racine, les synonymes ou les antonymes ne correspondent pas à la langue d'apprentissage (les mots complets et cohérents sont ignorés pour économiser les appels API). Utilise votre langue d'apprentissage actuelle.";
+"supplement_start" = "Lancer la mise à jour";
+"supplement_progress_format" = "Mise à jour %d / %d";
+"supplement_completed" = "Mise à jour terminée";
+"supplement_no_words" = "Aucun mot à mettre à jour.";
+"supplement_no_update_needed" = "Tous les mots sont complets et correspondent à la langue d'apprentissage. Aucune mise à jour nécessaire.";
+"supplement_api_calls_hint" = "Environ %d appels API seront utilisés";
+"supplement_count_hint" = "Sur %d mots au total, %d seront mis à jour (contenu manquant ou langue incohérente). Environ %d appels API seront utilisés.";
+"supplement_section_header" = "Compléter le vocabulaire";
+
+"language_description" = "Choisissez la langue d'affichage de l'interface.";
+"appearance_mode_system" = "Suivre le système";
+"appearance_mode_dark" = "Sombre";
+"appearance_mode_light" = "Clair";
+
+// MARK: - Add Word
+"word" = "Mot";
+"definition" = "Définition";
+"part_of_speech" = "Partie du discours & prononciation";
+"pronunciation" = "Prononciation";
+"example" = "Exemple";
+"translation" = "Traduction";
+"root" = "Racine";
+"root_placeholder" = "Racine / étymologie du mot (le cas échéant)";
+"synonyms_antonyms" = "Synonymes / Antonymes";
+"synonyms_placeholder" = "Synonymes / mots proches en anglais, séparés par des virgules (si disponibles)";
+"antonyms_placeholder" = "Antonymes en anglais, séparés par des virgules (si disponibles)";
+"word_sheet" = "Groupe de mots";
+"word_sheet_description" = "Choisissez le groupe dans lequel ajouter le mot. Par défaut, la date du jour est utilisée.";
+"save_word" = "Enregistrer le mot";
+"add_new_word_title" = "Ajouter un mot";
+"ai_fill" = "Remplir avec l’IA";
+"camera_recognize" = "Reconnaissance par caméra";
+"ai_generate_failed" = "Échec de la génération par IA";
+"select_recognition_region" = "Sélectionner la zone de reconnaissance";
+"recognize_full_image" = "Reconnaître l’image entière";
+"recognize_selected_region" = "Reconnaître la zone sélectionnée";
+"duplicate_word_title" = "Mot déjà existant";
+"duplicate_word_message" = "Le mot \"%@\" existe déjà dans ce groupe. Voulez-vous l’ajouter quand même ?";
+"skip" = "Ignorer";
+"add_anyway" = "Ajouter quand même";
+
+// MARK: - Study
+"focus_mode" = "Mode concentration";
+"recommended_review" = "Révision recommandée";
+"recommended_review_description" = "Recommande des mots à réviser selon la courbe de l’oubli d’Ebbinghaus";
+"recommended_review_completed" = "Révision recommandée terminée\nAjoutez de nouveaux mots !";
+"recommended_review_empty_no_words" = "Aucun mot dans votre bibliothèque. Ajoutez des mots ou vérifiez la synchronisation iCloud.";
+"recommended_review_empty_all_unlearned" = "Pas encore de mots maîtrisés pour la révision espacée. Utilisez Tout réviser ou Reprendre d’abord.";
+"recommended_review_empty_no_due" = "Aucun mot à réviser pour le moment. Revenez demain ou utilisez Tout réviser ci-dessous.";
+"review_all" = "Tout réviser";
+"review_all_description" = "Réviser tous les mots de toutes les listes.";
+"continue_last" = "Continuer la dernière session";
+"continue_last_description" = "Réviser les mots oubliés et les mots nouvellement ajoutés.";
+"forgot" = "Oublié";
+"remembered" = "Retenu";
+"daily_goal" = "Objectif quotidien";
+"click_to_flip" = "Touchez pour retourner et voir la définition.";
+"question" = "Question";
+"answer" = "Réponse";
+"ai_update_example" = "Mettre à jour l’exemple avec l’IA";
+"review_prompt" = "Conseil de révision";
+"review_again" = "Réviser à nouveau";
+"later" = "Plus tard";
+"all_words_reviewed" = "Bravo ! Tous les mots ont été révisés\nAjoutez de nouveaux mots !";
+"today_words_reviewed" = "Bravo ! Les mots du jour sont terminés\nAjoutez de nouveaux mots !";
+"go_add_new_words" = "Ajoutez de nouveaux mots !";
+"round_complete" = "Séquence terminée";
+"words_need_review" = " mots à réviser";
+"select_word_sheet" = "Sélectionner un groupe";
+"all_sheets" = "Tous les groupes";
+"play_pronunciation" = "Lire la prononciation";
+
+// MARK: - Batch Add
+"batch_add_words" = "Ajout en lot";
+"no_words_recognized" = "Aucun mot reconnu";
+"recognized_words" = "Mots reconnus";
+"select_all" = "Tout sélectionner";
+"deselect_all" = "Tout désélectionner";
+"selected_count" = "%d / %d mots sélectionnés";
+"adding" = "Ajout en cours... (%d/%d)";
+"batch_add" = "Ajouter en lot (%d)";
+"add_failed" = "Échec de l’ajout";
+"no_words_recognized_error" = "Aucun mot reconnu. Assurez-vous que l’image contient un texte anglais clair.";
+"recognize_failed" = "Échec de la reconnaissance : %@";
+"batch_add_completed" = "Ajout en lot terminé";
+"batch_add_completed_message" = "%d mots ajoutés avec succès. %d mots en double ont été ignorés.";
+
+// MARK: - Data Settings
+"local_data" = "Données locales";
+"import_data" = "Importer des données locales";
+"export_data" = "Exporter des données locales";
+"data_backup" = "Importer ou exporter des sauvegardes locales";
+"delete_account" = "Supprimer le compte";
+"delete_account_description" = "Supprime les informations du compte et efface toutes les données de mots sur cet appareil.";
+"delete_account_warning" = "Après suppression, les informations du compte, les enregistrements locaux, les sauvegardes et les images seront définitivement supprimés et ne pourront pas être restaurés.";
+"delete_account_confirm" = "Êtes-vous sûr de vouloir supprimer votre compte et toutes les données ? Cette action est irréversible.";
+"confirm_delete" = "Confirmer la suppression";
+"data_exported" = "Données exportées avec succès";
+"data_imported" = "Données importées avec succès";
+"export_success" = "Exportation réussie";
+"import_success" = "Importation réussie";
+"import_failed" = "Échec de l’importation";
+"export_csv" = "Exporter en CSV";
+"export_csv_description" = "Exporter les groupes sélectionnés en fichier CSV.";
+"select_sheets_to_export" = "Sélectionner les groupes à exporter";
+"select_all" = "Tout sélectionner";
+"deselect_all" = "Tout désélectionner";
+"no_sheets_selected" = "Veuillez sélectionner au moins un groupe";
+"no_words_in_selected_sheets" = "Aucun mot dans les groupes sélectionnés";
+"import_csv_file" = "Importer un fichier CSV local";
+"export_csv_file" = "Exporter en fichier CSV";
+
+// MARK: - Word List
+"my_word_list" = "Ma liste de mots";
+"search_words" = "Rechercher des mots...";
+"no_results" = "Aucun résultat";
+"try_other_keywords" = "Essayez d’autres mots-clés";
+
+// MARK: - About
+"version" = "Version %@";
+"features" = "Fonctionnalités";
+"updates" = "Mises à jour";
+"core_features" = "Fonctionnalités principales";
+"version_history" = "Historique des versions";
+"software_license" = "Contrat de licence logicielle et de service";
+"privacy_policy" = "Politique de confidentialité";
+"copyright" = "Droits d’auteur MooyuNet © 2025";
+"developer_website" = "Découvrez d’autres apps sur le site du développeur : Mooyu.cc";
+"apple_user" = "Utilisateur Apple";
+"user_name" = "Nom d’utilisateur";
+"user_name_description" = "Le nom d’utilisateur modifié sera affiché dans l’application.";
+"edit_user_name" = "Modifier le nom d’utilisateur";
+
+// MARK: - Features
+"word_management" = "Gestion de mots";
+"word_management_description" = "Ajoutez, modifiez et gérez facilement votre bibliothèque de mots, avec prise en charge de catégories personnalisées.";
+"intelligent_learning" = "Apprentissage intelligent";
+"intelligent_learning_description" = "Saisie assistée par IA, générant automatiquement définitions, exemples et prononciations pour un apprentissage plus efficace.";
+"camera_recognition_feature" = "Reconnaissance par caméra";
+"camera_recognition_description" = "Utilisez la caméra pour reconnaître des mots et les ajouter rapidement à votre liste d’apprentissage.";
+"learning_progress" = "Progression d’apprentissage";
+"learning_progress_description" = "Suivez votre progression en temps réel et consultez les statistiques des mots maîtrisés et à apprendre.";
+"review_system" = "Système de révision";
+"review_system_description" = "Un algorithme de révision intelligent pour consolider la mémoire et améliorer l’efficacité d’apprentissage.";
+"first_release" = "Première version";
+"support_word_add" = "Ajout et gestion de mots";
+"ai_smart_fill_feature" = "Remplissage intelligent par IA";
+"camera_recognize_feature" = "Reconnaissance de mots par caméra";
+"progress_tracking" = "Suivi de la progression";
+"review_system_feature" = "Système de révision";
+"version_date_format" = "Janvier 2025";
+"version_update_2_4_date" = "22 mars 2025";
+"version_update_2_4_recommended_review" = "Révision recommandée : filtrage et tri améliorés pour mieux suivre la courbe de mémoire et votre progression.";
+"version_update_2_4_progress_tab" = "Onglet Progrès : nouvelle Énergie vocabulaire (score, palier, progression vers le suivant, évolution sur 7 jours) ; mise en page simplifiée avec un accès rapide vers l’onglet Apprendre pour lancer la révision.";
+"version_update_2_4_study_ui" = "Étude et cartes : ajustements du flux de révision, des cartes et de la liste de mots.";
+"version_update_2_4_settings_data" = "Réglages et données : petites améliorations de mise en page et d’ergonomie.";
+"version_update_2_4_ai_paywall" = "IA et achats : messages d’usage IA plus clairs et ajustements du paywall et du flux d’achat.";
+"version_update_2_4_stability" = "Stabilité : correctifs et légères améliorations des performances.";
+
+// MARK: - Errors
+"unknown_error" = "Erreur inconnue";
+"invalid_image" = "Image non valide";
+"recognition_failed" = "Échec de la reconnaissance du texte : %@";
+"processing_failed" = "Échec du traitement de l’image : %@";
+
+// MARK: - Paywall
+"paywall_title" = "Passer à la version Pro";
+"paywall_subtitle" = "Débloquez plus de fonctionnalités premium et améliorez votre expérience d’apprentissage.";
+"paywall_feature_title" = "Fonctionnalités Pro";
+"paywall_feature_ai" = "Assistant d’apprentissage IA";
+"paywall_feature_import_export" = "Importation & exportation avancées de données";
+"paywall_button_restore" = "Restaurer les achats";
+"paywall_current_subscription" = "Abonnement actuel";
+"paywall_expires_on" = "Expire le : ";
+"paywall_lifetime_unlocked" = "Accès à vie débloqué";
+"paywall_lifetime_sync_hint" = "Vous disposez d’un accès permanent à toutes les fonctionnalités Pro.";
+"subscription_auto_renew_note" = "Les abonnements sont renouvelés automatiquement et peuvent être annulés dans les réglages du compte.";
+"subscription_monthly" = "Mensuel";
+"subscription_yearly" = "Annuel";
+"subscription_weekly" = "Hebdomadaire";
+"subscription_daily" = "Quotidien";
+"subscription_default" = "Abonnement";
+"one_time_purchase" = "Achat unique";
+"terms_of_use" = "Conditions d’utilisation";
+"privacy_policy" = "Politique de confidentialité";
+"terms_url" = "https://example.com/terms";
+"privacy_url" = "https://example.com/privacy";
+"onboarding_complete" = "Commencer";
+"membership_status_lifetime_active" = "Accès à vie actif";
+"trial_7_days" = "Essai gratuit de 7 jours";
+"trial_days" = "Essai gratuit de %d jours";
+"trial_weeks" = "Essai gratuit de %d semaines";
+"trial_months" = "Essai gratuit de %d mois";
+"trial_years" = "Essai gratuit de %d ans";
+"trial_free" = "Essai gratuit";
+"then" = "puis";
+
+// MARK: - Usage & Paywall
+"usage_no_calls_remaining" = "Plus de crédits disponibles";
+"usage_one_call_remaining" = "1 crédit restant";
+"usage_calls_remaining" = "%d crédits restants";
+"usage_remaining" = "Restant";
+"usage_total_used" = "Utilisés";
+"usage_stats" = "%d utilisés, %d restants";
+"usage_purchase_title" = "Acheter des crédits";
+"usage_purchase_calls" = "%d appels IA";
+"usage_price_format" = "%.2f $";
+"usage_purchase_description" = "Chaque achat vous donne %d appels API IA.";
+"usage_purchase_note" = "Les crédits n’expirent jamais et restent valides de manière permanente.";
+"usage_consumption_info" = "Les actions suivantes consomment des crédits IA :";
+"usage_consumption_ai_fill" = "Chaque remplissage de mot par IA consomme 1 crédit.";
+"usage_consumption_ai_example" = "Chaque mise à jour de phrase d’exemple par IA consomme 1 crédit.";
+"free_trial_welcome_title" = "Crédits gratuits reçus";
+"free_trial_welcome_message" = "Vous avez reçu %d crédits IA gratuits pour le remplissage de mots, la mise à jour d’exemples, etc.";
+"free_trial_welcome_button" = "Compris";
+"paywall_usage_title" = "Crédits d’appels IA";
+"paywall_usage_subtitle" = "Achetez plus de crédits pour continuer à utiliser les fonctionnalités IA.";
+"settings_ai_usage" = "Acheter";
+"error" = "Erreur";
+

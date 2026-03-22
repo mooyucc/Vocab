@@ -10,7 +10,7 @@ import SwiftData
 
 struct SheetPickerView: View {
     let sheets: [WordSheet]
-    @Binding var selectedSheetId: UUID?
+    @Binding var selectedSheetIds: Set<UUID>
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -18,14 +18,14 @@ struct SheetPickerView: View {
             List {
                 Section {
                     Button(action: {
-                        selectedSheetId = nil
+                        selectedSheetIds.removeAll()
                         dismiss()
                     }) {
                         HStack {
                             Text(LocalizedKey.allSheets)
                                 .foregroundStyle(.primary)
                             Spacer()
-                            if selectedSheetId == nil {
+                            if selectedSheetIds.isEmpty {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(.tint)
                             }
@@ -36,14 +36,17 @@ struct SheetPickerView: View {
                 Section {
                     ForEach(sheets) { sheet in
                         Button(action: {
-                            selectedSheetId = sheet.id
-                            dismiss()
+                            if selectedSheetIds.contains(sheet.id) {
+                                selectedSheetIds.remove(sheet.id)
+                            } else {
+                                selectedSheetIds.insert(sheet.id)
+                            }
                         }) {
                             HStack {
                                 Text(sheet.localizedDisplayName)
                                     .foregroundStyle(.primary)
                                 Spacer()
-                                if selectedSheetId == sheet.id {
+                                if selectedSheetIds.contains(sheet.id) {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(.tint)
                                 }
@@ -54,6 +57,13 @@ struct SheetPickerView: View {
             }
             .navigationTitle(LocalizedKey.selectWordSheet.rawValue.localized)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(LocalizedKey.done.rawValue.localized) {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }

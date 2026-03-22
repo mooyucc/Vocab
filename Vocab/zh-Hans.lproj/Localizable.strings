@@ -21,7 +21,7 @@
 
 // MARK: - Tab Bar
 "tab_progress" = "进度";
-"tab_study" = "背词";
+"tab_study" = "学习";
 "tab_word_list" = "词库";
 
 // MARK: - Home
@@ -33,8 +33,22 @@
 "to_learn" = "待学习";
 "start_review" = "开始复习";
 "add_new_word" = "添加新词";
-"recently_added" = "最近添加";
 "view_all" = "查看全部";
+"vocabulary_energy" = "词汇能量";
+"vocabulary_energy_score_label" = "能量值";
+"vocabulary_energy_tier_1_title" = "萌芽";
+"vocabulary_energy_tier_1_subtitle" = "添加单词并开始复习，为词汇能量充能。";
+"vocabulary_energy_tier_2_title" = "成长";
+"vocabulary_energy_tier_2_subtitle" = "坚持复习，记忆会越来越牢固。";
+"vocabulary_energy_tier_3_title" = "蓄力";
+"vocabulary_energy_tier_3_subtitle" = "你的词库正在变强，保持节奏！";
+"vocabulary_energy_tier_4_title" = "迸发";
+"vocabulary_energy_tier_4_subtitle" = "已掌握大量词汇，持续冲刺！";
+"vocabulary_energy_tier_5_title" = "巅峰";
+"vocabulary_energy_tier_5_subtitle" = "太棒了！你已是词汇达人。";
+"vocabulary_energy_next_hint" = "距离下一档还差 %d 点能量";
+"vocabulary_energy_last_7_days" = "近 7 天";
+"vocabulary_energy_last_7_days_pending" = "满 7 天记录后可看变化";
 "no_words_yet" = "还没有单词";
 "go_add_words" = "快去添加一些单词开始学习吧！";
 "daily_motivation" = "今天也要元气满满背单词 💪";
@@ -43,17 +57,36 @@
 
 // MARK: - Settings
 "account" = "账户";
+"account_sign_in_description" = "登录 Apple 账号以启用 iCloud 数据同步功能";
 "general" = "通用";
 "data" = "数据";
+"vocabulary_data" = "词库数据";
 "app" = "应用";
 "about" = "关于";
 "help" = "帮助与支持";
 "sign_out" = "退出登录";
 "sign_out_confirm" = "确定要退出登录吗？退出后需要重新登录才能同步数据。";
-"language" = "语言";
+"language" = "您的母语";
+"target_language" = "学习语言";
 "appearance" = "外观模式";
-"appearance_description" = "选择应用的外观模式,跟随系统将根据系统设置自动切换";
-"language_description" = "选择应用界面的显示语言";
+"appearance_description" = "选择应用的外观模式，跟随系统将根据系统设置自动切换";
+"language_description" = "选择应用界面的显示语言。";
+"target_language_description" = "选择你要学习的目标语言，AI 在补全释义和翻译时会优先使用该语言。";
+"supplement_root_synonyms" = "更新词库";
+"supplement_root_synonyms_description" = "仅更新缺少词根、近义词、反义词或例句的单词，或内容与学习语言不一致的单词（已有且一致的不会重复调用 AI），按当前学习语言补充。";
+"supplement_start" = "开始更新";
+"supplement_progress_format" = "正在更新 %d / %d";
+"supplement_completed" = "更新完成";
+"supplement_no_words" = "当前没有单词，无需更新。";
+"supplement_no_update_needed" = "所有单词内容完整且与学习语言一致，无需更新。";
+"supplement_api_calls_hint" = "预计消耗 %d 次 API 调用";
+"supplement_count_hint" = "共 %d 个单词中，%d 个需要更新（缺少内容或与学习语言不一致），将仅更新这些。预计消耗 %d 次 API 调用。";
+
+"supplement_section_header" = "词库补充";
+
+"appearance_mode_system" = "系统";
+"appearance_mode_dark" = "深色";
+"appearance_mode_light" = "浅色";
 
 // MARK: - Add Word
 "word" = "单词";
@@ -62,6 +95,11 @@
 "pronunciation" = "音标";
 "example" = "例句";
 "translation" = "翻译";
+"root" = "词根";
+"root_placeholder" = "词根 / 词源（如有）";
+"synonyms_antonyms" = "近义词 / 反义词";
+"synonyms_placeholder" = "近义词 / 相关词（英文，逗号分隔，如有）";
+"antonyms_placeholder" = "反义词（英文，逗号分隔，如有）";
 "word_sheet" = "词库分组";
 "word_sheet_description" = "选择将单词添加到的分组，默认使用今天的日期";
 "save_word" = "保存单词";
@@ -72,16 +110,23 @@
 "select_recognition_region" = "选择识别区域";
 "recognize_full_image" = "识别整张";
 "recognize_selected_region" = "识别选中区域";
+"duplicate_word_title" = "单词已存在";
+"duplicate_word_message" = "单词 \"%@\" 在此词库分组中已存在，是否仍然添加？";
+"skip" = "跳过";
+"add_anyway" = "仍然添加";
 
 // MARK: - Study
 "focus_mode" = "专注模式";
 "recommended_review" = "推荐复习";
-"recommended_review_description" = "根据艾宾浩斯遗忘曲线，从全部词库中智能推荐需要复习的单词";
+"recommended_review_description" = "根据艾宾浩斯遗忘曲线推荐复习单词";
 "recommended_review_completed" = "推荐复习完成\n去添加一些新词吧";
+"recommended_review_empty_no_words" = "词库中暂无单词，请先添加单词或检查 iCloud 同步。";
+"recommended_review_empty_all_unlearned" = "还没有已「记住」的单词可进入间隔复习。请先用「复习全部」或「接着上次」巩固生词。";
+"recommended_review_empty_no_due" = "暂无到期的复习单词，请明天再来，或使用下方「复习全部」。";
 "review_all" = "复习全部";
-"review_all_description" = "将记住的、忘记的单词全部再来一遍";
+"review_all_description" = "复习全部词库所有单词";
 "continue_last" = "接着上次复习";
-"continue_last_description" = "复习忘记的和还没有复习过的单词";
+"continue_last_description" = "复习忘记的和新增的单词";
 "forgot" = "忘记了";
 "remembered" = "记住了";
 "daily_goal" = "每日目标";
@@ -114,6 +159,8 @@
 "add_failed" = "添加失败";
 "no_words_recognized_error" = "未识别到任何单词，请确保图片中包含清晰的英文文字";
 "recognize_failed" = "识别失败: %@";
+"batch_add_completed" = "批量添加完成";
+"batch_add_completed_message" = "成功添加 %d 个单词，已跳过 %d 个重复单词。";
 
 // MARK: - Data Settings
 "local_data" = "本地数据";
@@ -130,6 +177,15 @@
 "export_success" = "导出成功";
 "import_success" = "导入成功";
 "import_failed" = "导入失败";
+"export_csv" = "导出为CSV";
+"export_csv_description" = "将选中的词库导出为CSV文件";
+"select_sheets_to_export" = "选择要导出的词库";
+"select_all" = "全选";
+"deselect_all" = "取消全选";
+"no_sheets_selected" = "请至少选择一个词库";
+"no_words_in_selected_sheets" = "选中的词库中没有单词";
+"import_csv_file" = "导入本地CSV文件";
+"export_csv_file" = "导出为CSV文件";
 
 // MARK: - Word List
 "my_word_list" = "我的词库";
@@ -143,6 +199,40 @@
 "updates" = "版本更新";
 "core_features" = "核心功能";
 "version_history" = "版本历史";
+"software_license" = "《软件许可及服务协议》";
+"privacy_policy" = "《隐私保护指引》";
+"copyright" = "MooyuNet 版权所有 © 2025";
+"developer_website" = "更多App请访问开发者网址：Mooyu.cc";
+"apple_user" = "Apple 用户";
+"user_name" = "用户名";
+"user_name_description" = "修改后的用户名将显示在应用中";
+"edit_user_name" = "编辑用户名";
+
+// MARK: - Features
+"word_management" = "单词管理";
+"word_management_description" = "轻松添加、编辑和管理您的单词库，支持自定义词库分类。";
+"intelligent_learning" = "智能学习";
+"intelligent_learning_description" = "AI 辅助录入单词，自动生成释义、例句和发音，让学习更高效。";
+"camera_recognition_feature" = "拍照识别";
+"camera_recognition_description" = "使用相机拍照识别单词，快速添加新词汇到您的学习列表。";
+"learning_progress" = "学习进度";
+"learning_progress_description" = "实时跟踪学习进度，查看已掌握和待学习的单词统计。";
+"review_system" = "复习系统";
+"review_system_description" = "智能复习算法，帮助您巩固记忆，提高学习效率。";
+"first_release" = "首次发布";
+"support_word_add" = "支持单词添加和管理";
+"ai_smart_fill_feature" = "AI 智能辅助录入";
+"camera_recognize_feature" = "拍照识别单词功能";
+"progress_tracking" = "学习进度跟踪";
+"review_system_feature" = "复习系统";
+"version_date_format" = "2025年1月";
+"version_update_2_4_date" = "2025年3月22日";
+"version_update_2_4_recommended_review" = "推荐复习：优化「推荐复习」的单词筛选与排序计算逻辑，使待复习列表更贴合记忆规律与实际学习进度";
+"version_update_2_4_progress_tab" = "进度页：新增「词汇能量」统计（总积分、等级与距下一级的进度、近 7 天能量变化）；精简首页信息结构，突出「开始复习」并直达学习 tab";
+"version_update_2_4_study_ui" = "学习与闪卡：复习流程、闪卡与单词列表等场景的交互与展示细节优化";
+"version_update_2_4_settings_data" = "设置与数据：设置与数据相关页面的布局与操作体验微调";
+"version_update_2_4_ai_paywall" = "AI 与付费相关：AI 调用提示、付费墙与购买流程的展示与逻辑细节改进";
+"version_update_2_4_stability" = "稳定性：问题修复与性能方面的小幅提升";
 
 // MARK: - Errors
 "unknown_error" = "未知错误";
@@ -174,3 +264,33 @@
 "privacy_url" = "https://example.com/privacy";
 "onboarding_complete" = "开始使用";
 "membership_status_lifetime_active" = "终身有效";
+"trial_7_days" = "7天免费试用";
+"trial_days" = "%d天免费试用";
+"trial_weeks" = "%d周免费试用";
+"trial_months" = "%d个月免费试用";
+"trial_years" = "%d年免费试用";
+"trial_free" = "免费试用";
+"then" = "然后";
+
+// MARK: - Usage & Paywall
+"usage_no_calls_remaining" = "没有剩余调用次数";
+"usage_one_call_remaining" = "剩余 1 次调用";
+"usage_calls_remaining" = "剩余 %d 次调用";
+"usage_remaining" = "剩余次数";
+"usage_total_used" = "已使用";
+"usage_stats" = "已使用 %d 次，剩余 %d 次";
+"usage_purchase_title" = "购买调用次数";
+"usage_purchase_calls" = "%d 次 AI 调用";
+"usage_price_format" = "¥%.2f";
+"usage_purchase_description" = "每次购买可获得 %d 次 AI API 调用";
+"usage_purchase_note" = "调用次数永久有效，不会过期";
+"usage_consumption_info" = "以下操作会消耗 AI 调用次数：";
+"usage_consumption_ai_fill" = "每次单词的 AI 补充会消耗 1 次调用";
+"usage_consumption_ai_example" = "每次 AI 更新例句会消耗 1 次调用";
+"free_trial_welcome_title" = "恭喜获得免费额度";
+"free_trial_welcome_message" = "您已获得 %d 次 AI 调用免费额度，可用于单词 AI 补充、AI 更新例句等功能。";
+"free_trial_welcome_button" = "知道了";
+"paywall_usage_title" = "AI 调用次数";
+"paywall_usage_subtitle" = "购买更多次数以继续使用 AI 功能";
+"settings_ai_usage" = "购买";
+"error" = "错误";

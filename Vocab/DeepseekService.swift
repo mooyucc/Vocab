@@ -13,6 +13,39 @@ struct WordDetails: Codable {
     let pronunciation: String
     let example: String
     let exampleCn: String
+    let root: String?
+    let synonyms: String?
+    let antonyms: String?
+}
+
+/// API调用错误
+enum DeepseekServiceError: LocalizedError {
+    case noRemainingCalls
+    case apiKeyNotSet
+    case invalidURL
+    case apiRequestFailed(Int)
+    case invalidResponse
+    case jsonParsingFailed
+    case exampleExtractionFailed
+    
+    var errorDescription: String? {
+        switch self {
+        case .noRemainingCalls:
+            return "usage_no_calls_remaining".localized
+        case .apiKeyNotSet:
+            return "请先设置 API Key"
+        case .invalidURL:
+            return "无效的 URL"
+        case .apiRequestFailed(let code):
+            return "API 请求失败，状态码: \(code)"
+        case .invalidResponse:
+            return "无法解析 API 响应"
+        case .jsonParsingFailed:
+            return "无法解析 JSON"
+        case .exampleExtractionFailed:
+            return "无法从响应中提取例句"
+        }
+    }
 }
 
 class DeepseekService {
@@ -25,35 +58,88 @@ class DeepseekService {
             return key
         }
         // 如果没有环境变量，使用直接设置的 API Key
-        return "sk-83e8676babc541e5841e7c33a49093c0"
+        return "sk-f59687e9e0cf4d15941c964ed0c66414"
     }
+    
+    private let usageTracker = UsageTracker.shared
     
     private init() {}
     
+    // 验证并确保不使用 deepseek-reasoner 模式
+    private func validateModel(_ model: String) throws -> String {
+        let lowercased = model.lowercased()
+        if lowercased.contains("reasoner") {
+            throw NSError(domain: "DeepseekService", code: 100, userInfo: [NSLocalizedDescriptionKey: "禁止使用 deepseek-reasoner 模式"])
+        }
+        return model
+    }
+    
     func generateWordDetails(for word: String) async throws -> WordDetails {
+        // 检查是否有剩余调用次数
+        guard usageTracker.hasRemainingCalls() else {
+            throw DeepseekServiceError.noRemainingCalls
+        }
+        
         guard !apiKey.isEmpty else {
-            throw NSError(domain: "DeepseekService", code: 1, userInfo: [NSLocalizedDescriptionKey: "请先设置 API Key"])
+            throw DeepseekServiceError.apiKeyNotSet
         }
         
         let urlString = "https://api.deepseek.com/v1/chat/completions"
         guard let url = URL(string: urlString) else {
-            throw NSError(domain: "DeepseekService", code: 2, userInfo: [NSLocalizedDescriptionKey: "无效的 URL"])
+            throw DeepseekServiceError.invalidURL
         }
+        
+        // 根据用户设置的学习语言和母语生成提示：
+        // - 用户在“添加单词”页面输入（或拍照识别）的单词为「学习语言」单词
+        // - AI 生成的释义与翻译应使用「母语」
+        let settings = AppSettingsManager.shared
+        let learningLanguage = settings.targetLanguage
+        let nativeLanguage = settings.language
+        
+        func languageName(_ language: AppLanguage) -> String {
+            switch language {
+            case .chinese:
+                return "Simplified Chinese"
+            case .chineseTraditional:
+                return "Traditional Chinese"
+            case .english:
+                return "English"
+            case .japanese:
+                return "Japanese"
+            case .french:
+                return "French"
+            case .spanish:
+                return "Spanish"
+            case .korean:
+                return "Korean"
+            }
+        }
+        
+        let learningLanguageName = languageName(learningLanguage)
+        let nativeLanguageName = languageName(nativeLanguage)
         
         let prompt = """
-        You are a vocabulary assistant. For the English word "\(word)", provide the following details in strictly valid JSON format:
+        You are a vocabulary assistant.
+        The learner's target (learning) language is \(learningLanguageName), and the learner's native language is \(nativeLanguageName).
+        The word "\(word)" is written in \(learningLanguageName).
+        Provide the following details in strictly valid JSON format:
         {
-          "definition": "Concise Chinese definition",
-          "partOfSpeech": "Part of speech (e.g., n., v., adj.)",
-          "example": "A simple, common English example sentence",
-          "exampleCn": "Chinese translation of the example sentence",
-          "pronunciation": "IPA phonetic transcription (e.g., /wɜːrd/)"
+          "definition": "Concise explanation of the word in \(nativeLanguageName), suitable for learners",
+          "partOfSpeech": "Part of speech for the word, using common abbreviations (e.g., n., v., adj.) in \(learningLanguageName) or English",
+          "example": "A simple, common example sentence in \(learningLanguageName) that correctly uses the word",
+          "exampleCn": "Translation of the example sentence written in \(nativeLanguageName)",
+          "pronunciation": "IPA phonetic transcription for the word's pronunciation (e.g., /wɜːrd/)",
+          "root": "Main word root or etymology described in \(learningLanguageName) or English (or empty string if not applicable)",
+          "synonyms": "Common synonyms written in \(learningLanguageName), comma-separated (or empty string if none)",
+          "antonyms": "Common antonyms written in \(learningLanguageName), comma-separated (or empty string if none)"
         }
-        Do not include markdown formatting (like ```json). Just the raw JSON object.
+        Do not include any explanation outside the JSON.
+        Do not include markdown formatting (like ```json). Just return the raw JSON object.
         """
         
+        let modelName = try validateModel("deepseek-chat")
         let requestBody: [String: Any] = [
-            "model": "deepseek-chat",
+            "model": modelName,
             "messages": [
                 [
                     "role": "user",
@@ -74,7 +160,7 @@ class DeepseekService {
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw NSError(domain: "DeepseekService", code: 3, userInfo: [NSLocalizedDescriptionKey: "API 请求失败，状态码: \(statusCode)"])
+            throw DeepseekServiceError.apiRequestFailed(statusCode)
         }
         
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -82,7 +168,7 @@ class DeepseekService {
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
               let text = message["content"] as? String else {
-            throw NSError(domain: "DeepseekService", code: 4, userInfo: [NSLocalizedDescriptionKey: "无法解析 API 响应"])
+            throw DeepseekServiceError.invalidResponse
         }
         
         // 清理可能的 markdown 格式
@@ -91,22 +177,32 @@ class DeepseekService {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard let jsonData = cleanText.data(using: .utf8) else {
-            throw NSError(domain: "DeepseekService", code: 5, userInfo: [NSLocalizedDescriptionKey: "无法解析 JSON"])
+            throw DeepseekServiceError.jsonParsingFailed
         }
         
         let decoder = JSONDecoder()
-        return try decoder.decode(WordDetails.self, from: jsonData)
+        let result = try decoder.decode(WordDetails.self, from: jsonData)
+        
+        // API调用成功，记录使用次数
+        usageTracker.useCall()
+        
+        return result
     }
     
     // 生成每日激励语
     func generateDailyMotivation() async throws -> String {
+        // 检查是否有剩余调用次数
+        guard usageTracker.hasRemainingCalls() else {
+            throw DeepseekServiceError.noRemainingCalls
+        }
+        
         guard !apiKey.isEmpty else {
-            throw NSError(domain: "DeepseekService", code: 1, userInfo: [NSLocalizedDescriptionKey: "请先设置 API Key"])
+            throw DeepseekServiceError.apiKeyNotSet
         }
         
         let urlString = "https://api.deepseek.com/v1/chat/completions"
         guard let url = URL(string: urlString) else {
-            throw NSError(domain: "DeepseekService", code: 2, userInfo: [NSLocalizedDescriptionKey: "无效的 URL"])
+            throw DeepseekServiceError.invalidURL
         }
         
         // 根据当前语言设置生成对应的 prompt
@@ -141,8 +237,9 @@ class DeepseekService {
             """
         }
         
+        let modelName = try validateModel("deepseek-chat")
         let requestBody: [String: Any] = [
-            "model": "deepseek-chat",
+            "model": modelName,
             "messages": [
                 [
                     "role": "user",
@@ -164,7 +261,7 @@ class DeepseekService {
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw NSError(domain: "DeepseekService", code: 3, userInfo: [NSLocalizedDescriptionKey: "API 请求失败，状态码: \(statusCode)"])
+            throw DeepseekServiceError.apiRequestFailed(statusCode)
         }
         
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -172,7 +269,7 @@ class DeepseekService {
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
               var text = message["content"] as? String else {
-            throw NSError(domain: "DeepseekService", code: 4, userInfo: [NSLocalizedDescriptionKey: "无法解析 API 响应"])
+            throw DeepseekServiceError.invalidResponse
         }
         
         // 清理可能的格式
@@ -190,18 +287,26 @@ class DeepseekService {
             }
         }
         
+        // API调用成功，记录使用次数
+        usageTracker.useCall()
+        
         return text
     }
     
     // 生成新的例句
     func generateNewExample(for word: String, partOfSpeech: String, definition: String, currentExample: String? = nil) async throws -> (example: String, exampleCn: String) {
+        // 检查是否有剩余调用次数
+        guard usageTracker.hasRemainingCalls() else {
+            throw DeepseekServiceError.noRemainingCalls
+        }
+        
         guard !apiKey.isEmpty else {
-            throw NSError(domain: "DeepseekService", code: 1, userInfo: [NSLocalizedDescriptionKey: "请先设置 API Key"])
+            throw DeepseekServiceError.apiKeyNotSet
         }
         
         let urlString = "https://api.deepseek.com/v1/chat/completions"
         guard let url = URL(string: urlString) else {
-            throw NSError(domain: "DeepseekService", code: 2, userInfo: [NSLocalizedDescriptionKey: "无效的 URL"])
+            throw DeepseekServiceError.invalidURL
         }
         
         // 解析词性，支持多个词性（用空格、逗号或分号分隔）
@@ -219,47 +324,80 @@ class DeepseekService {
             selectedPartOfSpeech = partOfSpeech
         }
         
+        // 根据当前设置获取学习语言和母语
+        let settings = AppSettingsManager.shared
+        let learningLanguage = settings.targetLanguage
+        let nativeLanguage = settings.language
+        
+        func languageName(_ language: AppLanguage) -> String {
+            switch language {
+            case .chinese:
+                return "Simplified Chinese"
+            case .chineseTraditional:
+                return "Traditional Chinese"
+            case .english:
+                return "English"
+            case .japanese:
+                return "Japanese"
+            case .french:
+                return "French"
+            case .spanish:
+                return "Spanish"
+            case .korean:
+                return "Korean"
+            }
+        }
+        
+        let learningLanguageName = languageName(learningLanguage)
+        let nativeLanguageName = languageName(nativeLanguage)
+        
         // 构建提示语
         var prompt = """
-        请为英文单词 "\(word)" 生成一个全新的例句。要求：
-        1. 单词词性：\(selectedPartOfSpeech)（如果该单词有多种词性，请使用这个指定的词性）
-        2. 单词释义：\(definition)
-        3. 例句要简单易懂，适合英语学习者
-        4. 例句要能很好地展示这个单词的用法
-        5. **重要：例句的句式必须与现有例句完全不同**
+        You are a vocabulary assistant.
+        The learner's target (learning) language is \(learningLanguageName), and the learner's native language is \(nativeLanguageName).
+        Please generate a completely new example sentence for the word "\(word)" written in \(learningLanguageName).
+        Requirements:
+        1. Part of speech: \(selectedPartOfSpeech) (if the word has multiple parts of speech, use this specified one)
+        2. Word meaning (in native language): \(definition)
+        3. The example sentence must be written in \(learningLanguageName), simple and easy to understand, suitable for learners.
+        4. The sentence should clearly demonstrate the correct usage of the word.
+        5. IMPORTANT: The sentence structure must be completely different from the existing example.
         """
         
         // 如果有当前例句，要求避免相似
         if let currentExample = currentExample, !currentExample.isEmpty {
             prompt += """
             
-            当前例句是："\(currentExample)"
-            请生成一个句式结构完全不同的新例句，避免使用相似的句型、语序或表达方式。
-            例如：如果当前是陈述句，可以尝试疑问句、感叹句、条件句、被动语态等不同句式。
+            The current example sentence is:
+            "\(currentExample)"
+            Please generate a new sentence whose structure is clearly different.
+            Avoid using similar sentence patterns, word order, or expressions.
+            For example, if the current one is a simple declarative sentence, you can try a question, exclamation, conditional sentence, passive voice, etc.
             """
         } else {
             prompt += """
             
-            请使用多样化的句式，可以尝试：
-            - 陈述句、疑问句、感叹句、祈使句
-            - 简单句、复合句、复杂句
-            - 主动语态、被动语态
-            - 不同的时态和语态
+            Please use diverse sentence patterns, such as:
+            - Declarative, interrogative, exclamatory, or imperative sentences
+            - Simple, compound, or complex sentences
+            - Active or passive voice
+            - Different tenses and aspects where appropriate
             """
         }
         
         prompt += """
         
-        6. 请以严格有效的 JSON 格式返回：
+        6. Return the result in strictly valid JSON format:
         {
-          "example": "英文例句",
-          "exampleCn": "中文翻译"
+          "example": "Example sentence written in \(learningLanguageName)",
+          "exampleCn": "Translation of the example sentence written in \(nativeLanguageName)"
         }
-        不要包含 markdown 格式（如 ```json），只返回原始 JSON 对象。
+        Do not include markdown formatting (like ```json). Just return the raw JSON object.
         """
         
+        let modelName = try validateModel("deepseek-chat")
         let requestBody: [String: Any] = [
-            "model": "deepseek-chat",
+            "model": modelName,
             "messages": [
                 [
                     "role": "user",
@@ -280,7 +418,7 @@ class DeepseekService {
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw NSError(domain: "DeepseekService", code: 3, userInfo: [NSLocalizedDescriptionKey: "API 请求失败，状态码: \(statusCode)"])
+            throw DeepseekServiceError.apiRequestFailed(statusCode)
         }
         
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -288,7 +426,7 @@ class DeepseekService {
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
               let text = message["content"] as? String else {
-            throw NSError(domain: "DeepseekService", code: 4, userInfo: [NSLocalizedDescriptionKey: "无法解析 API 响应"])
+            throw DeepseekServiceError.invalidResponse
         }
         
         // 清理可能的 markdown 格式
@@ -297,7 +435,7 @@ class DeepseekService {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard let jsonData = cleanText.data(using: .utf8) else {
-            throw NSError(domain: "DeepseekService", code: 5, userInfo: [NSLocalizedDescriptionKey: "无法解析 JSON"])
+            throw DeepseekServiceError.jsonParsingFailed
         }
         
         let decoder = JSONDecoder()
@@ -305,8 +443,11 @@ class DeepseekService {
         
         guard let example = exampleData["example"],
               let exampleCn = exampleData["exampleCn"] else {
-            throw NSError(domain: "DeepseekService", code: 6, userInfo: [NSLocalizedDescriptionKey: "无法从响应中提取例句"])
+            throw DeepseekServiceError.exampleExtractionFailed
         }
+        
+        // API调用成功，记录使用次数
+        usageTracker.useCall()
         
         return (example: example, exampleCn: exampleCn)
     }

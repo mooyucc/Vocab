@@ -2,181 +2,154 @@
 //  PurchaseManager.swift
 //  Vocab
 //
-//  使用 StoreKit 2 管理订阅产品的加载、购买与恢复。
+//  Created by 徐化军 on 2026/1/29.
 //
 
 import Foundation
 import StoreKit
 import Combine
 
-@MainActor
-final class PurchaseManager: ObservableObject {
-    static let shared = PurchaseManager()
+/// 内购产品ID
+enum PurchaseProductID {
+    /// 100次AI调用（2元）
+    static let aiCalls100 = "com.mooyunet.vocab.ai_calls_100"
+}
 
+/// 内购管理器
+@MainActor
+class PurchaseManager: ObservableObject {
+    static let shared = PurchaseManager()
+    
     @Published var products: [Product] = []
     @Published var purchasedProductIDs: Set<String> = []
-    @Published var isLoading: Bool = false
+    @Published var isLoading = false
     @Published var errorMessage: String?
-
-    private var updateListenerTask: Task<Void, Never>?
-
+    
+    private var updateListenerTask: Task<Void, Error>?
+    
     private init() {
-        // 启动交易监听
+        // 启动监听器，监听交易更新
         updateListenerTask = listenForTransactions()
-
-        // 预加载产品与权益
+        
+        // 加载产品
         Task {
             await loadProducts()
             await updatePurchasedProducts()
         }
     }
-
+    
     deinit {
         updateListenerTask?.cancel()
     }
-
-    // MARK: - 产品加载
-
+    
+    /// 加载可购买的产品
     func loadProducts() async {
         isLoading = true
         defer { isLoading = false }
-
-        do {
-            products = try await Product.products(for: SubscriptionProductID.all)
-                .sorted { $0.price < $1.price }
-        } catch {
-            errorMessage = "加载产品失败：\(error.localizedDescription)"
-        }
-    }
-
-    // MARK: - 购买与恢复
-
-    func purchase(_ product: Product) async -> Transaction? {
-        await MainActor.run {
-            errorMessage = nil // 清除之前的错误信息
-        }
         
         do {
-            print("🛒 开始购买产品: \(product.id)")
-            print("🛒 调用 product.purchase()，等待系统弹窗...")
-            
-            let result = try await product.purchase()
-            
-            print("🛒 product.purchase() 返回结果: \(result)")
-            
-            switch result {
-            case .success(let verification):
-                print("✅ 购买成功，验证交易...")
-                let transaction = try checkVerified(verification)
-                print("✅ 交易验证成功，产品ID: \(transaction.productID), 交易ID: \(transaction.id)")
-                print("✅ 交易类型: \(transaction.productType), 购买日期: \(transaction.purchaseDate)")
-                
-                // 检查订阅信息
-                if let expirationDate = transaction.expirationDate {
-                    print("ℹ️ 订阅到期时间: \(expirationDate)")
-                    if expirationDate > Date() {
-                        print("ℹ️ 订阅当前有效")
-                    } else {
-                        print("ℹ️ 订阅已过期")
-                    }
-                }
-                
-                await transaction.finish()
-                await updatePurchasedProducts()
-                print("✅ 交易完成并已标记为完成")
-                return transaction
-            case .userCancelled:
-                print("⚠️ 用户取消购买")
-                await MainActor.run {
-                    errorMessage = nil // 用户取消不需要显示错误
-                }
-                return nil
-            case .pending:
-                print("⏳ 购买待处理")
-                await MainActor.run {
-                    errorMessage = "购买正在处理中，请稍候..."
-                }
-                return nil
-            @unknown default:
-                print("❓ 未知购买结果: \(result)")
-                return nil
-            }
+            let productIDs = [PurchaseProductID.aiCalls100]
+            products = try await Product.products(for: productIDs)
         } catch {
-            print("❌ 购买失败: \(error)")
-            print("❌ 错误详情: \(error.localizedDescription)")
-            if let storeKitError = error as? StoreKitError {
-                print("❌ StoreKit错误: \(storeKitError)")
-            }
-            await MainActor.run {
-                errorMessage = "购买失败：\(error.localizedDescription)"
-            }
-            return nil
+            errorMessage = "Failed to load products: \(error.localizedDescription)"
+            print("❌ 加载产品失败: \(error)")
         }
     }
-
+    
+    /// 购买产品
+    /// - Parameter product: 要购买的产品
+    func purchase(_ product: Product) async throws -> Bool {
+        let result = try await product.purchase()
+        
+        switch result {
+        case .success(let verification):
+            let transaction = try Self.checkVerified(verification)
+            // 购买成功，添加调用次数
+            if transaction.productID == PurchaseProductID.aiCalls100 {
+                await MainActor.run {
+                    UsageTracker.shared.addCalls(UsageTracker.callsPerPurchase)
+                }
+            }
+            await transaction.finish()
+            await updatePurchasedProducts()
+            return true
+            
+        case .userCancelled:
+            return false
+            
+        case .pending:
+            return false
+            
+        @unknown default:
+            return false
+        }
+    }
+    
+    /// 恢复购买
     func restorePurchases() async {
+        isLoading = true
+        defer { isLoading = false }
+        
         do {
             try await AppStore.sync()
             await updatePurchasedProducts()
         } catch {
-            errorMessage = "恢复购买失败：\(error.localizedDescription)"
+            errorMessage = "Failed to restore purchases: \(error.localizedDescription)"
+            print("❌ 恢复购买失败: \(error)")
         }
     }
-
-    // MARK: - 交易监听
-
-    private func listenForTransactions() -> Task<Void, Never> {
-        Task.detached { [weak self] in
-            for await result in Transaction.updates {
-                await self?.handle(transactionResult: result)
-            }
-        }
-    }
-
-    private func handle(transactionResult: VerificationResult<Transaction>) async {
-        do {
-            let transaction = try checkVerified(transactionResult)
-            await transaction.finish()
-            await updatePurchasedProducts()
-        } catch {
-            await MainActor.run {
-                self.errorMessage = "交易验证失败：\(error.localizedDescription)"
-            }
-        }
-    }
-
-    // MARK: - 权益更新
-
-    private func updatePurchasedProducts() async {
-        var purchasedIDs = Set<String>()
-
+    
+    /// 更新已购买的产品列表
+    func updatePurchasedProducts() async {
+        var purchasedIDs: Set<String> = []
+        
         for await result in Transaction.currentEntitlements {
             do {
-                let transaction = try checkVerified(result)
-                switch transaction.productType {
-                case .autoRenewable, .nonConsumable:
-                    purchasedIDs.insert(transaction.productID)
-                default:
-                    break
-                }
+                let transaction = try Self.checkVerified(result)
+                purchasedIDs.insert(transaction.productID)
             } catch {
-                continue
+                print("❌ 验证交易失败: \(error)")
             }
         }
-
-        await MainActor.run {
-            self.purchasedProductIDs = purchasedIDs
+        
+        purchasedProductIDs = purchasedIDs
+    }
+    
+    /// 监听交易更新
+    private func listenForTransactions() -> Task<Void, Error> {
+        return Task.detached {
+            for await result in Transaction.updates {
+                do {
+                    let transaction = try Self.checkVerified(result)
+                    // 处理交易
+                    if transaction.productID == PurchaseProductID.aiCalls100 {
+                        await MainActor.run {
+                            UsageTracker.shared.addCalls(UsageTracker.callsPerPurchase)
+                        }
+                    }
+                    await transaction.finish()
+                    await PurchaseManager.shared.updatePurchasedProducts()
+                } catch {
+                    print("❌ 处理交易更新失败: \(error)")
+                }
+            }
         }
     }
-
-    // MARK: - 验证封装
-
-    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+    
+    /// 验证交易（静态方法，可从非 MainActor 上下文调用）
+    private nonisolated static func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
         case .unverified:
-            throw NSError(domain: "PurchaseManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "交易未验证"])
+            throw PurchaseError.unverifiedTransaction
         case .verified(let safe):
             return safe
         }
     }
+}
+
+/// 购买错误
+enum PurchaseError: Error {
+    case unverifiedTransaction
+    case productNotFound
+    case purchaseFailed
 }
