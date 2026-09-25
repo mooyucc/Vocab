@@ -13,6 +13,10 @@ final class WordSheet: Identifiable {
     var id: UUID = UUID()
     var name: String = ""
     var createdAt: Date = Date()
+    var sortOrder: Int = 0
+    var isPinned: Bool = false
+    var symbolName: String = "book.closed"
+    var colorName: String = "accent"
     
     @Relationship(deleteRule: .cascade, inverse: \Word.sheet)
     var words: [Word]?
@@ -20,11 +24,19 @@ final class WordSheet: Identifiable {
     init(
         id: UUID = UUID(),
         name: String,
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        sortOrder: Int = 0,
+        isPinned: Bool = false,
+        symbolName: String = "book.closed",
+        colorName: String = "accent"
     ) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
+        self.sortOrder = sortOrder
+        self.isPinned = isPinned
+        self.symbolName = symbolName
+        self.colorName = colorName
     }
 }
 
@@ -90,12 +102,37 @@ final class Word: Identifiable {
     }
 }
 
-// MARK: - 词汇能量（进度页与学习 tab 顶栏共用同一算法）
-enum VocabularyEnergy {
-    /// 已掌握词数 × 40 + min(全库复习次数之和, 400)
-    static func totalPoints(for words: [Word]) -> Int {
-        let mastered = words.filter(\.learned).count
-        let reviewSum = words.reduce(0) { $0 + $1.reviewCount }
-        return mastered * 40 + min(reviewSum, 400)
+// MARK: - 推荐复习（艾宾浩斯间隔，学习 Tab 与习题 Tab 共用）
+enum SpacedRepetition {
+    /// 仅对已「记住了」的词；间隔只看「推荐复习」内累计（spacedLastReviewed / spacedReviewCount）
+    static func dueWords(from words: [Word], now: Date = Date()) -> [Word] {
+        let calendar = Calendar.current
+        return words.filter { word in
+            guard word.learned else { return false }
+            guard let spacedLast = word.spacedLastReviewed else {
+                return true
+            }
+            let daysSinceSpaced = calendar.dateComponents([.day], from: spacedLast, to: now).day ?? 0
+            return daysSinceSpaced >= intervalDays(forSpacedCount: word.spacedReviewCount)
+        }
+    }
+    
+    /// `count` 为在推荐复习中累计「记住了」的次数
+    static func intervalDays(forSpacedCount count: Int) -> Int {
+        switch count {
+        case 0: return 0
+        case 1: return 1
+        case 2: return 3
+        case 3: return 7
+        case 4: return 15
+        case 5: return 30
+        default: return 30
+        }
+    }
+    
+    static func emptyHintKey(for words: [Word]) -> LocalizedKey {
+        if words.isEmpty { return .recommendedReviewEmptyNoWords }
+        if !words.contains(where: \.learned) { return .recommendedReviewEmptyAllUnlearned }
+        return .recommendedReviewEmptyNoDue
     }
 }

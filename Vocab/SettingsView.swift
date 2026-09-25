@@ -397,6 +397,8 @@ struct EditUserNameView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
+            .dismissKeyboardOnTap()
             .navigationTitle(LocalizedKey.editUserName.rawValue.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

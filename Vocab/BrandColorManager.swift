@@ -12,8 +12,8 @@ import Combine
 class BrandColorManager: ObservableObject {
     static let shared = BrandColorManager()
     
-    /// 默认品牌颜色（蓝色，适合学习应用）
-    let defaultBrandColor = Color.blue
+    /// 默认品牌颜色（珊瑚，与进度卡 / 主 CTA 一致）
+    let defaultBrandColor = Color.vocabBrand
     
     /// 当前品牌颜色（可观察属性，变化时自动通知所有视图）
     @Published var currentBrandColor: Color
@@ -25,6 +25,11 @@ class BrandColorManager: ObservableObject {
 
 /// Color 扩展，支持十六进制颜色
 extension Color {
+    /// 品牌主色
+    static let vocabBrand = Color(hex: "FE6A57")
+    /// 品牌辅色（渐变末端）
+    static let vocabBrandDeep = Color(hex: "FE2E69")
+    
     /// 从十六进制字符串创建颜色
     /// - Parameter hex: 十六进制颜色字符串（例如 "FE6A57" 或 "#FE6A57"）
     init(hex: String) {
@@ -50,10 +55,10 @@ extension Color {
     }
 }
 
-/// 与进度页「总进度」卡片一致的品牌渐变（进度卡片、主操作按钮、词库「+」等复用）
+/// 品牌渐变（词库「+」、闪卡等复用）
 extension LinearGradient {
     static let vocabBrandProgress = LinearGradient(
-        gradient: Gradient(colors: [Color(hex: "FE6A57"), Color(hex: "FE2E69")]),
+        colors: [.vocabBrand, .vocabBrandDeep],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )

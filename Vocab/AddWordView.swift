@@ -11,6 +11,7 @@ import SwiftData
 struct AddWordView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizedString = LocalizedString.shared
     
     @Query(sort: \WordSheet.createdAt, order: .reverse) private var allSheets: [WordSheet]
     @Query private var words: [Word]
@@ -38,6 +39,16 @@ struct AddWordView: View {
     @State private var showDuplicateAlert: Bool = false
     @State private var pendingWordData: (term: String, definition: String, partOfSpeech: String, pronunciation: String, example: String, exampleCn: String, root: String, synonyms: String, antonyms: String)?
     @State private var showPaywall: Bool = false
+    @State private var showCreateSheet = false
+    @State private var errorTitleKey: LocalizedKey = .aiGenerateFailed
+    
+    private var canSaveWord: Bool {
+        !term.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    private var sortedSheets: [WordSheet] {
+        WordSheetService.sortedSheets(allSheets)
+    }
     
     // MARK: - 示例占位内容（根据学习语言 & 母语适配）
     private var sampleWordPlaceholder: String {
@@ -207,48 +218,57 @@ struct AddWordView: View {
                 // Sheet 选择
                 Section {
                     Picker(LocalizedKey.wordSheet.rawValue.localized, selection: $selectedSheetId) {
-                        ForEach(allSheets) { sheet in
+                        if WordSheetService.findTodaySheet(in: allSheets) == nil {
+                            Text(DateFormatter.localizedDateString(from: Date()))
+                                .tag(nil as UUID?)
+                        }
+                        ForEach(sortedSheets) { sheet in
                             Text(sheet.localizedDisplayName).tag(sheet.id as UUID?)
                         }
+                    }
+                    Button {
+                        showCreateSheet = true
+                    } label: {
+                        Label(LocalizedKey.newSheet.rawValue.localized, systemImage: "folder.badge.plus")
                     }
                 } header: {
                     Text(LocalizedKey.wordSheet)
                 } footer: {
                     Text(LocalizedKey.wordSheetDescription)
                 }
-                
-                // 保存按钮
-                Section {
-                    Button(action: handleSubmit) {
-                        HStack {
-                            Spacer()
-                            Text(LocalizedKey.saveWord)
-                                .fontWeight(.semibold)
-                            Spacer()
-                        }
-                    }
-                    .disabled(term.isEmpty || definition.isEmpty)
-                    .accessibilityLabel(LocalizedKey.saveWord.rawValue.localized)
-                }
             }
+            .scrollDismissesKeyboard(.interactively)
+            .dismissKeyboardOnTap()
             .navigationTitle(LocalizedKey.addNewWordTitle.rawValue.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(LocalizedKey.cancel.rawValue.localized) {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
                         showCameraPicker = true
-                    }) {
+                    } label: {
                         Image(systemName: "camera.fill")
-                            .foregroundStyle(.tint)
                     }
                     .disabled(isLoading || isRecognizing)
                     .accessibilityLabel(LocalizedKey.cameraRecognize.rawValue.localized)
                 }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(LocalizedKey.saveWord.rawValue.localized) {
+                        handleSubmit()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(!canSaveWord || isLoading || isRecognizing)
+                    .accessibilityLabel(LocalizedKey.saveWord.rawValue.localized)
+                }
             }
-            .alert(LocalizedKey.aiGenerateFailed.rawValue.localized, isPresented: $showError) {
+            .alert(errorTitleKey.rawValue.localized, isPresented: $showError) {
                 Button(LocalizedKey.ok.rawValue.localized, role: .cancel) { }
             } message: {
-                Text(errorMessage ?? "未知错误")
+                Text(errorMessage ?? LocalizedKey.unknownError.rawValue.localized)
             }
             .alert(LocalizedKey.duplicateWordTitle.rawValue.localized, isPresented: $showDuplicateAlert) {
                 Button(LocalizedKey.skip.rawValue.localized, role: .cancel) {
@@ -277,12 +297,16 @@ struct AddWordView: View {
             }
             .onAppear {
                 if selectedSheetId == nil {
-                    let todaySheet = getOrCreateTodaySheet()
-                    selectedSheetId = todaySheet.id
+                    selectedSheetId = WordSheetService.findTodaySheet(in: allSheets)?.id
                 }
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $showCreateSheet) {
+                WordSheetEditorView(sheet: nil) { created in
+                    selectedSheetId = created.id
+                }
             }
             .sheet(isPresented: $showBatchAddView) {
                 BatchAddWordsView(recognizedWords: recognizedWords)
@@ -317,28 +341,7 @@ struct AddWordView: View {
     }
     
     private func getOrCreateTodaySheet() -> WordSheet {
-        let formatter = DateFormatter()
-        // 根据语言设置日期格式和 locale
-        let language = AppSettingsManager.shared.language
-        if language == .chinese {
-            formatter.locale = Locale(identifier: "zh_Hans")
-            formatter.dateFormat = "yyyy年M月d日"
-        } else {
-            formatter.locale = Locale(identifier: "en_US")
-            formatter.dateFormat = "MMMM d, yyyy"
-        }
-        let todayName = formatter.string(from: Date())
-        
-        // 查找今天是否已有 sheet
-        if let existingSheet = allSheets.first(where: { $0.name == todayName }) {
-            return existingSheet
-        }
-        
-        // 创建新的 sheet
-        let newSheet = WordSheet(name: todayName)
-        modelContext.insert(newSheet)
-        try? modelContext.save()
-        return newSheet
+        WordSheetService.findOrCreateTodaySheet(in: allSheets, context: modelContext)
     }
     
     private var selectedSheet: WordSheet? {
@@ -373,31 +376,36 @@ struct AddWordView: View {
                        case .noRemainingCalls = serviceError {
                         showPaywall = true
                     } else {
-                        errorMessage = error.localizedDescription
-                        showError = true
+                        presentError(error.localizedDescription, title: .aiGenerateFailed)
                     }
                 }
             }
         }
     }
     
+    private func presentError(_ message: String, title: LocalizedKey) {
+        errorTitleKey = title
+        errorMessage = message
+        showError = true
+    }
+    
     private func handleSubmit() {
-        guard !term.isEmpty && !definition.isEmpty else { return }
+        let trimmedTerm = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTerm.isEmpty else { return }
         
-        // 检查是否重复
-        let sheet = selectedSheet ?? getOrCreateTodaySheet()
-        let normalizedTerm = term.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        // 检查是否重复（未落库的今日词库不可能有重复）
+        let sheet = selectedSheet ?? WordSheetService.findTodaySheet(in: allSheets)
+        let normalizedTerm = trimmedTerm.lowercased()
         
-        // 检查当前sheet中是否已有相同单词（忽略大小写和空格）
-        let isDuplicate = words.contains { word in
-            word.sheet?.id == sheet.id &&
+        let isDuplicate = sheet != nil && words.contains { word in
+            word.sheet?.id == sheet?.id &&
             word.term.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedTerm
         }
         
         if isDuplicate {
             // 保存待添加的单词数据，显示提示对话框
             pendingWordData = (
-                term: term,
+                term: trimmedTerm,
                 definition: definition,
                 partOfSpeech: partOfSpeech,
                 pronunciation: pronunciation,
@@ -411,7 +419,7 @@ struct AddWordView: View {
         } else {
             // 没有重复，直接保存
             saveWord(
-                term: term,
+                term: trimmedTerm,
                 definition: definition,
                 partOfSpeech: partOfSpeech,
                 pronunciation: pronunciation,
@@ -442,8 +450,13 @@ struct AddWordView: View {
         )
         
         modelContext.insert(newWord)
-        try? modelContext.save()
-        dismiss()
+        do {
+            try modelContext.save()
+            VocabHaptics.notify(.success)
+            dismiss()
+        } catch {
+            presentError(error.localizedDescription, title: .addFailed)
+        }
     }
     
     private func handleImageSelected(_ image: UIImage) async {
@@ -457,8 +470,7 @@ struct AddWordView: View {
                 isRecognizing = false
                 
                 if words.isEmpty {
-                    errorMessage = LocalizedKey.noWordsRecognizedError.rawValue.localized
-                    showError = true
+                    presentError(LocalizedKey.noWordsRecognizedError.rawValue.localized, title: .recognitionFailed)
                 } else {
                     recognizedWords = words
                     showBatchAddView = true
@@ -467,8 +479,10 @@ struct AddWordView: View {
         } catch {
             await MainActor.run {
                 isRecognizing = false
-                errorMessage = String(format: LocalizedKey.recognizeFailed.rawValue.localized, error.localizedDescription)
-                showError = true
+                presentError(
+                    String(format: LocalizedKey.recognizeFailed.rawValue.localized, error.localizedDescription),
+                    title: .recognitionFailed
+                )
             }
         }
     }

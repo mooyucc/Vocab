@@ -27,6 +27,7 @@ enum DeepseekServiceError: LocalizedError {
     case invalidResponse
     case jsonParsingFailed
     case exampleExtractionFailed
+    case clozeExtractionFailed
     
     var errorDescription: String? {
         switch self {
@@ -44,32 +45,57 @@ enum DeepseekServiceError: LocalizedError {
             return "无法解析 JSON"
         case .exampleExtractionFailed:
             return "无法从响应中提取例句"
+        case .clozeExtractionFailed:
+            return "exercise_ai_parse_failed".localized
         }
     }
+}
+
+struct ClozeWordInput {
+    let term: String
+    let partOfSpeech: String
+    let definition: String
+    let currentExample: String
+}
+
+struct ClozeGenerationItem: Codable {
+    let term: String
+    let sentence: String
+    let answer: String
+    let translation: String
+    let forms: [String]?
 }
 
 class DeepseekService {
     static let shared = DeepseekService()
     
-    // Deepseek API Key
+    // Deepseek API Key：环境变量 > Config/Secrets.xcconfig（经 Info.plist 注入）
     private var apiKey: String {
-        // 优先从环境变量读取
         if let key = ProcessInfo.processInfo.environment["DEEPSEEK_API_KEY"], !key.isEmpty {
             return key
         }
-        // 如果没有环境变量，使用直接设置的 API Key
-        return "sk-f59687e9e0cf4d15941c964ed0c66414"
+        if let key = Bundle.main.object(forInfoDictionaryKey: "DEEPSEEK_API_KEY") as? String {
+            let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+            // 未配置 xcconfig 时可能残留未展开的 $(DEEPSEEK_API_KEY)
+            if !trimmed.isEmpty && !trimmed.hasPrefix("$(") {
+                return trimmed
+            }
+        }
+        return ""
     }
     
     private let usageTracker = UsageTracker.shared
     
+    /// deepseek-chat / deepseek-reasoner 已于 2026/07/24 停用，改用 v4-flash（关闭 thinking，行为接近原 chat）
+    private let defaultModel = "deepseek-v4-flash"
+    
     private init() {}
     
-    // 验证并确保不使用 deepseek-reasoner 模式
+    // 验证并确保不使用已停用的模型名
     private func validateModel(_ model: String) throws -> String {
         let lowercased = model.lowercased()
-        if lowercased.contains("reasoner") {
-            throw NSError(domain: "DeepseekService", code: 100, userInfo: [NSLocalizedDescriptionKey: "禁止使用 deepseek-reasoner 模式"])
+        if lowercased.contains("reasoner") || lowercased == "deepseek-chat" {
+            throw NSError(domain: "DeepseekService", code: 100, userInfo: [NSLocalizedDescriptionKey: "禁止使用已停用的 deepseek-chat / deepseek-reasoner，请使用 deepseek-v4-flash"])
         }
         return model
     }
@@ -117,11 +143,13 @@ class DeepseekService {
         
         let learningLanguageName = languageName(learningLanguage)
         let nativeLanguageName = languageName(nativeLanguage)
+        let scriptRule = chineseScriptConstraint(learningLanguage: learningLanguage, nativeLanguage: nativeLanguage)
         
         let prompt = """
         You are a vocabulary assistant.
         The learner's target (learning) language is \(learningLanguageName), and the learner's native language is \(nativeLanguageName).
         The word "\(word)" is written in \(learningLanguageName).
+        \(scriptRule)
         Provide the following details in strictly valid JSON format:
         {
           "definition": "Concise explanation of the word in \(nativeLanguageName), suitable for learners",
@@ -137,7 +165,7 @@ class DeepseekService {
         Do not include markdown formatting (like ```json). Just return the raw JSON object.
         """
         
-        let modelName = try validateModel("deepseek-chat")
+        let modelName = try validateModel(defaultModel)
         let requestBody: [String: Any] = [
             "model": modelName,
             "messages": [
@@ -146,7 +174,8 @@ class DeepseekService {
                     "content": prompt
                 ]
             ],
-            "temperature": 0.7
+            "temperature": 0.7,
+            "thinking": ["type": "disabled"]
         ]
         
         var request = URLRequest(url: url)
@@ -237,7 +266,7 @@ class DeepseekService {
             """
         }
         
-        let modelName = try validateModel("deepseek-chat")
+        let modelName = try validateModel(defaultModel)
         let requestBody: [String: Any] = [
             "model": modelName,
             "messages": [
@@ -247,7 +276,8 @@ class DeepseekService {
                 ]
             ],
             "temperature": 0.9,
-            "max_tokens": 100
+            "max_tokens": 100,
+            "thinking": ["type": "disabled"]
         ]
         
         var request = URLRequest(url: url)
@@ -350,11 +380,13 @@ class DeepseekService {
         
         let learningLanguageName = languageName(learningLanguage)
         let nativeLanguageName = languageName(nativeLanguage)
+        let scriptRule = chineseScriptConstraint(learningLanguage: learningLanguage, nativeLanguage: nativeLanguage)
         
         // 构建提示语
         var prompt = """
         You are a vocabulary assistant.
         The learner's target (learning) language is \(learningLanguageName), and the learner's native language is \(nativeLanguageName).
+        \(scriptRule)
         Please generate a completely new example sentence for the word "\(word)" written in \(learningLanguageName).
         Requirements:
         1. Part of speech: \(selectedPartOfSpeech) (if the word has multiple parts of speech, use this specified one)
@@ -395,7 +427,7 @@ class DeepseekService {
         Do not include markdown formatting (like ```json). Just return the raw JSON object.
         """
         
-        let modelName = try validateModel("deepseek-chat")
+        let modelName = try validateModel(defaultModel)
         let requestBody: [String: Any] = [
             "model": modelName,
             "messages": [
@@ -404,7 +436,8 @@ class DeepseekService {
                     "content": prompt
                 ]
             ],
-            "temperature": 1.0  // 提高temperature值增加多样性
+            "temperature": 1.0,  // 提高temperature值增加多样性
+            "thinking": ["type": "disabled"]
         ]
         
         var request = URLRequest(url: url)
@@ -450,5 +483,167 @@ class DeepseekService {
         usageTracker.useCall()
         
         return (example: example, exampleCn: exampleCn)
+    }
+    
+    /// 一次生成整套完形填空（消耗 1 次调用），不写回词库例句
+    func generateClozeSet(for words: [ClozeWordInput]) async throws -> [ClozeGenerationItem] {
+        guard usageTracker.hasRemainingCalls() else {
+            throw DeepseekServiceError.noRemainingCalls
+        }
+        guard !apiKey.isEmpty else {
+            throw DeepseekServiceError.apiKeyNotSet
+        }
+        guard !words.isEmpty else {
+            throw DeepseekServiceError.clozeExtractionFailed
+        }
+        
+        let urlString = "https://api.deepseek.com/v1/chat/completions"
+        guard let url = URL(string: urlString) else {
+            throw DeepseekServiceError.invalidURL
+        }
+        
+        let settings = AppSettingsManager.shared
+        let learningLanguageName = languageDisplayName(settings.targetLanguage)
+        let nativeLanguageName = languageDisplayName(settings.language)
+        let scriptRule = chineseScriptConstraint(learningLanguage: settings.targetLanguage, nativeLanguage: settings.language)
+        
+        let wordLines = words.enumerated().map { index, word in
+            let example = word.currentExample.isEmpty ? "(none)" : word.currentExample
+            return """
+            \(index + 1). term="\(word.term)"; pos="\(word.partOfSpeech)"; meaning="\(word.definition)"; existingExample="\(example)"
+            """
+        }.joined(separator: "\n")
+        
+        let prompt = """
+        You are a vocabulary quiz assistant creating a cloze (fill-in-the-blank) exercise.
+        The learner's target (learning) language is \(learningLanguageName), and the learner's native language is \(nativeLanguageName).
+        \(scriptRule)
+        Create exactly \(words.count) cloze items, one for each word below. Each sentence must use that word (any grammatically correct inflected form).
+        
+        Words:
+        \(wordLines)
+        
+        Return strictly valid JSON:
+        {
+          "items": [
+            {
+              "term": "the lemma exactly as given",
+              "sentence": "A full sentence in \(learningLanguageName) that contains the inflected form",
+              "answer": "the exact inflected form as it appears in sentence",
+              "translation": "translation of the sentence in \(nativeLanguageName)",
+              "forms": ["lemma", "other common inflected forms", "answer"]
+            }
+          ]
+        }
+        Rules:
+        1. Use each word exactly once. Keep the "term" field identical to the given lemma.
+        2. The sentence must be written in \(learningLanguageName), simple and suitable for learners.
+        3. Do NOT copy or closely paraphrase the existing example.
+        4. "answer" MUST appear in "sentence" as a whole word/token.
+        5. "forms" contains 3-5 common inflected forms of the same lemma and MUST include both the lemma and "answer". If the language has little inflection, "forms" may contain only the lemma.
+        6. Do not include markdown or any text outside the JSON object.
+        """
+        
+        let modelName = try validateModel(defaultModel)
+        let requestBody: [String: Any] = [
+            "model": modelName,
+            "messages": [
+                [
+                    "role": "user",
+                    "content": prompt
+                ]
+            ],
+            "temperature": 0.8,
+            "thinking": ["type": "disabled"]
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            throw DeepseekServiceError.apiRequestFailed(statusCode)
+        }
+        
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        guard let choices = json?["choices"] as? [[String: Any]],
+              let firstChoice = choices.first,
+              let message = firstChoice["message"] as? [String: Any],
+              let text = message["content"] as? String else {
+            throw DeepseekServiceError.invalidResponse
+        }
+        
+        guard let jsonData = stripMarkdownJSON(text).data(using: .utf8) else {
+            throw DeepseekServiceError.jsonParsingFailed
+        }
+        
+        struct ClozeGenerationResponse: Codable {
+            let items: [ClozeGenerationItem]
+        }
+        
+        let decoded: ClozeGenerationResponse
+        do {
+            decoded = try JSONDecoder().decode(ClozeGenerationResponse.self, from: jsonData)
+        } catch {
+            throw DeepseekServiceError.clozeExtractionFailed
+        }
+        
+        let items = decoded.items.filter {
+            !$0.term.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !$0.sentence.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !$0.answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        guard !items.isEmpty else {
+            throw DeepseekServiceError.clozeExtractionFailed
+        }
+        
+        usageTracker.useCall()
+        return items
+    }
+    
+    private func languageDisplayName(_ language: AppLanguage) -> String {
+        switch language {
+        case .chinese:
+            return "Simplified Chinese"
+        case .chineseTraditional:
+            return "Traditional Chinese"
+        case .english:
+            return "English"
+        case .japanese:
+            return "Japanese"
+        case .french:
+            return "French"
+        case .spanish:
+            return "Spanish"
+        case .korean:
+            return "Korean"
+        }
+    }
+    
+    /// 简繁不能混用：学习语言或母语为中文时，强制对应字形。
+    private func chineseScriptConstraint(learningLanguage: AppLanguage, nativeLanguage: AppLanguage) -> String {
+        let involvesChinese = [learningLanguage, nativeLanguage].contains {
+            $0 == .chinese || $0 == .chineseTraditional
+        }
+        guard involvesChinese else { return "" }
+        return """
+        Chinese script rule: "Simplified Chinese" must use 简体字 only; "Traditional Chinese" must use 繁體字 only. Never mix the two scripts or substitute one for the other.
+        """
+    }
+    
+    private func stripMarkdownJSON(_ text: String) -> String {
+        var clean = text.replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let start = clean.firstIndex(of: "{"), let end = clean.lastIndex(of: "}") {
+            clean = String(clean[start...end])
+        }
+        return clean
     }
 }

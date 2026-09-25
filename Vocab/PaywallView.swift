@@ -139,6 +139,15 @@ struct PaywallView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
+                            
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "text.badge.checkmark")
+                                    .font(.caption)
+                                    .foregroundStyle(paywallGradient)
+                                Text("usage_consumption_ai_exercise".localized)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)

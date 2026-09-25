@@ -345,13 +345,13 @@ struct DataSettingsView: View {
                             var sheet: WordSheet? = nil
                             if !sheetName.isEmpty {
                                 // 使用规范化KEY（日期 -> yyyy-MM-dd，普通名称保持原样）
-                                let sheetKey = canonicalSheetKey(forName: sheetName)
+                                let sheetKey = WordSheetService.canonicalKey(forName: sheetName)
                                 
                                 if let existingSheet = sheetMap[sheetKey] {
                                     sheet = existingSheet
                                 } else {
                                     // 查找是否已存在相同日期/名称的sheet
-                                    if let existing = sheets.first(where: { canonicalSheetKey(forName: $0.name) == sheetKey }) {
+                                    if let existing = sheets.first(where: { WordSheetService.canonicalKey(forName: $0.name) == sheetKey }) {
                                         sheet = existing
                                         sheetMap[sheetKey] = existing
                                     } else {
@@ -468,37 +468,13 @@ struct DataSettingsView: View {
         return result
     }
     
-    // MARK: - Sheet 名称规范化工具
-    /// 将词库名称转换为规范化KEY：
-    /// - 如果是日期（中/英格式），统一为 "yyyy-MM-dd"
-    /// - 否则直接返回原始名称
-    private func canonicalSheetKey(forName name: String) -> String {
-        // 与 LocalizedString.localizedDisplayName 保持一致的日期解析规则
-        let chineseFormatter = DateFormatter()
-        chineseFormatter.locale = Locale(identifier: "zh_Hans")
-        chineseFormatter.dateFormat = "yyyy年M月d日"
-        
-        let englishFormatter = DateFormatter()
-        englishFormatter.locale = Locale(identifier: "en_US")
-        englishFormatter.dateFormat = "MMMM d, yyyy"
-        
-        if let date = chineseFormatter.date(from: name) ?? englishFormatter.date(from: name) {
-            let normalized = DateFormatter()
-            normalized.calendar = Calendar(identifier: .gregorian)
-            normalized.locale = Locale(identifier: "en_US_POSIX")
-            normalized.dateFormat = "yyyy-MM-dd"
-            return normalized.string(from: date)
-        }
-        return name
-    }
-    
     // MARK: - 合并重复日期词库（一次性维护工具）
     /// 查找名称解析为同一日期的多个词库，将其合并到一个主词库中，避免下拉列表中日期重复
     private func mergeDuplicateDateSheets() {
         // 按规范化KEY分组
         var groups: [String: [WordSheet]] = [:]
         for sheet in sheets {
-            let key = canonicalSheetKey(forName: sheet.name)
+            let key = WordSheetService.canonicalKey(forName: sheet.name)
             groups[key, default: []].append(sheet)
         }
         

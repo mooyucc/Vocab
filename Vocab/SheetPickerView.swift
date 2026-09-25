@@ -12,6 +12,7 @@ struct SheetPickerView: View {
     let sheets: [WordSheet]
     @Binding var selectedSheetIds: Set<UUID>
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizedString = LocalizedString.shared
     
     var body: some View {
         NavigationStack {
@@ -43,8 +44,16 @@ struct SheetPickerView: View {
                             }
                         }) {
                             HStack {
+                                Image(systemName: sheet.displaySymbolName)
+                                    .foregroundStyle(sheet.tintColor)
+                                    .frame(width: 24)
                                 Text(sheet.localizedDisplayName)
                                     .foregroundStyle(.primary)
+                                if sheet.isPinned {
+                                    Image(systemName: "pin.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
                                 Spacer()
                                 if selectedSheetIds.contains(sheet.id) {
                                     Image(systemName: "checkmark")

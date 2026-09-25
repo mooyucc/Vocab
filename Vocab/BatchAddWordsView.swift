@@ -11,6 +11,7 @@ import SwiftData
 struct BatchAddWordsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizedString = LocalizedString.shared
     
     @Query(sort: \WordSheet.createdAt, order: .reverse) private var allSheets: [WordSheet]
     @Query private var words: [Word]
@@ -25,6 +26,11 @@ struct BatchAddWordsView: View {
     @State private var showError: Bool = false
     @State private var showSkipAlert: Bool = false
     @State private var showPaywall: Bool = false
+    @State private var showCreateSheet = false
+    
+    private var sortedSheets: [WordSheet] {
+        WordSheetService.sortedSheets(allSheets)
+    }
     
     var body: some View {
         NavigationStack {
@@ -32,9 +38,18 @@ struct BatchAddWordsView: View {
                 // Sheet 选择
                 Section {
                     Picker(LocalizedKey.wordSheet.rawValue.localized, selection: $selectedSheetId) {
-                        ForEach(allSheets) { sheet in
+                        if WordSheetService.findTodaySheet(in: allSheets) == nil {
+                            Text(DateFormatter.localizedDateString(from: Date()))
+                                .tag(nil as UUID?)
+                        }
+                        ForEach(sortedSheets) { sheet in
                             Text(sheet.localizedDisplayName).tag(sheet.id as UUID?)
                         }
+                    }
+                    Button {
+                        showCreateSheet = true
+                    } label: {
+                        Label(LocalizedKey.newSheet.rawValue.localized, systemImage: "folder.badge.plus")
                     }
                 } header: {
                     Text(LocalizedKey.wordSheet)
@@ -150,6 +165,11 @@ struct BatchAddWordsView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
+            .sheet(isPresented: $showCreateSheet) {
+                WordSheetEditorView(sheet: nil) { created in
+                    selectedSheetId = created.id
+                }
+            }
             .alert(LocalizedKey.batchAddCompleted.rawValue.localized, isPresented: $showSkipAlert) {
                 Button(LocalizedKey.ok.rawValue.localized, role: .cancel) {
                     dismiss()
@@ -158,41 +178,16 @@ struct BatchAddWordsView: View {
                 Text(String(format: LocalizedKey.batchAddCompletedMessage.rawValue.localized, processedCount - skippedCount, skippedCount))
             }
             .onAppear {
-                // 默认选择所有单词
                 selectedWords = Set(recognizedWords)
-                
-                // 设置默认sheet
                 if selectedSheetId == nil {
-                    let todaySheet = getOrCreateTodaySheet()
-                    selectedSheetId = todaySheet.id
+                    selectedSheetId = WordSheetService.findTodaySheet(in: allSheets)?.id
                 }
             }
         }
     }
     
     private func getOrCreateTodaySheet() -> WordSheet {
-        let formatter = DateFormatter()
-        // 根据语言设置日期格式和 locale
-        let language = AppSettingsManager.shared.language
-        if language == .chinese {
-            formatter.locale = Locale(identifier: "zh_Hans")
-            formatter.dateFormat = "yyyy年M月d日"
-        } else {
-            formatter.locale = Locale(identifier: "en_US")
-            formatter.dateFormat = "MMMM d, yyyy"
-        }
-        let todayName = formatter.string(from: Date())
-        
-        // 查找今天是否已有 sheet
-        if let existingSheet = allSheets.first(where: { $0.name == todayName }) {
-            return existingSheet
-        }
-        
-        // 创建新的 sheet
-        let newSheet = WordSheet(name: todayName)
-        modelContext.insert(newSheet)
-        try? modelContext.save()
-        return newSheet
+        WordSheetService.findOrCreateTodaySheet(in: allSheets, context: modelContext)
     }
     
     private var selectedSheet: WordSheet? {

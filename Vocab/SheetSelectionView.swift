@@ -12,14 +12,17 @@ struct SheetSelectionView: View {
     @Query(sort: \WordSheet.createdAt, order: .reverse) private var allSheets: [WordSheet]
     @Query private var words: [Word]
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizedString = LocalizedString.shared
     
     @State private var selectedSheetIds: Set<UUID> = []
     let onConfirm: (Set<UUID>) -> Void
     
     private var sheetsWithWords: [WordSheet] {
-        allSheets.filter { sheet in
-            words.contains { $0.sheet?.id == sheet.id }
-        }
+        WordSheetService.sortedSheets(
+            allSheets.filter { sheet in
+                words.contains { $0.sheet?.id == sheet.id }
+            }
+        )
     }
     
     private var allSelected: Bool {
@@ -62,7 +65,7 @@ struct SheetSelectionView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(sheet.localizedDisplayName)
                                         .foregroundStyle(.primary)
-                                    Text(String(format: "%d %@", words.filter { $0.sheet?.id == sheet.id }.count, LocalizedKey.word.rawValue.localized))
+                                    Text(LocalizedFormat.wordCount(words.filter { $0.sheet?.id == sheet.id }.count))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }

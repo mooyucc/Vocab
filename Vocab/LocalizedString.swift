@@ -60,69 +60,62 @@ extension String {
 }
 
 /// 日期格式化辅助函数
+private enum LocalizedDateFormatCache {
+    static var language: AppLanguage?
+    static var dateFormatter: DateFormatter?
+    static var monthFormatter: DateFormatter?
+}
+
 extension DateFormatter {
     /// 根据当前语言设置获取日期格式
     static func localizedDateFormatter() -> DateFormatter {
-        let formatter = DateFormatter()
         let language = AppSettingsManager.shared.language
-        if language == .chinese || language == .chineseTraditional {
-            formatter.locale = Locale(identifier: "zh_Hans")
-            formatter.dateFormat = "yyyy年M月d日"
-        } else {
-            formatter.locale = Locale(identifier: "en_US")
-            formatter.dateFormat = "MMMM d, yyyy"
+        if LocalizedDateFormatCache.language == language,
+           let cached = LocalizedDateFormatCache.dateFormatter {
+            return cached
         }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: language.rawValue)
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.setLocalizedDateFormatFromTemplate("yMMMd")
+        LocalizedDateFormatCache.language = language
+        LocalizedDateFormatCache.dateFormatter = formatter
+        LocalizedDateFormatCache.monthFormatter = nil
         return formatter
     }
     
     /// 格式化日期为本地化字符串
     static func localizedDateString(from date: Date) -> String {
-        let formatter = localizedDateFormatter()
+        localizedDateFormatter().string(from: date)
+    }
+    
+    /// 格式化月份（词库「按月」分组）
+    static func localizedMonthString(from date: Date) -> String {
+        _ = localizedDateFormatter()
+        if let cached = LocalizedDateFormatCache.monthFormatter {
+            return cached.string(from: date)
+        }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: AppSettingsManager.shared.language.rawValue)
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.setLocalizedDateFormatFromTemplate("yMMMM")
+        LocalizedDateFormatCache.monthFormatter = formatter
         return formatter.string(from: date)
     }
 }
 
-/// WordSheet 扩展，用于格式化显示名称
-extension WordSheet {
-    /// 获取本地化格式的显示名称
-    /// 如果名称是日期格式，则根据当前语言重新格式化
-    var localizedDisplayName: String {
-        // 尝试解析名称是否为日期格式
-        let chineseFormatter = DateFormatter()
-        chineseFormatter.locale = Locale(identifier: "zh_Hans")
-        chineseFormatter.dateFormat = "yyyy年M月d日"
-        
-        let englishFormatter = DateFormatter()
-        englishFormatter.locale = Locale(identifier: "en_US")
-        englishFormatter.dateFormat = "MMMM d, yyyy"
-        
-        // 先尝试用中文格式解析
-        if let date = chineseFormatter.date(from: name) {
-            return DateFormatter.localizedDateString(from: date)
+enum LocalizedFormat {
+    /// 词库列表中的单词数量（按界面语言处理单复数）
+    static func wordCount(_ count: Int) -> String {
+        switch AppSettingsManager.shared.language {
+        case .english, .french, .spanish:
+            if count == 1 {
+                return LocalizedKey.wordCountOne.rawValue.localized
+            }
+        default:
+            break
         }
-        
-        // 再尝试用英文格式解析
-        if let date = englishFormatter.date(from: name) {
-            return DateFormatter.localizedDateString(from: date)
-        }
-        
-        // 如果名称看起来像日期格式但解析失败，尝试使用 createdAt 日期
-        // 检查名称是否包含日期相关的字符
-        if name.contains("年") || name.contains("月") || name.contains("日") || 
-           name.contains("January") || name.contains("February") || name.contains("March") ||
-           name.contains("April") || name.contains("May") || name.contains("June") ||
-           name.contains("July") || name.contains("August") || name.contains("September") ||
-           name.contains("October") || name.contains("November") || name.contains("December") ||
-           name.contains("一月") || name.contains("二月") || name.contains("三月") ||
-           name.contains("四月") || name.contains("五月") || name.contains("六月") ||
-           name.contains("七月") || name.contains("八月") || name.contains("九月") ||
-           name.contains("十月") || name.contains("十一月") || name.contains("十二月") {
-            // 如果名称看起来像日期但无法解析，使用 createdAt
-            return DateFormatter.localizedDateString(from: createdAt)
-        }
-        
-        // 如果无法解析为日期，直接返回名称
-        return name
+        return String(format: LocalizedKey.wordCountFormat.rawValue.localized, count)
     }
 }
 
@@ -138,10 +131,14 @@ enum LocalizedKey: String {
     case ok = "ok"
     case yes = "yes"
     case no = "no"
+    case edit = "edit"
+    case more = "more"
     
     // MARK: - Tab Bar
     case tabProgress = "tab_progress"
     case tabStudy = "tab_study"
+    case tabExercise = "tab_exercise"
+    case tabGuess = "tab_guess"
     case tabWordList = "tab_word_list"
     
     // MARK: - Home
@@ -154,26 +151,17 @@ enum LocalizedKey: String {
     case startReview = "start_review"
     case addNewWord = "add_new_word"
     case viewAll = "view_all"
-    case vocabularyEnergy = "vocabulary_energy"
-    case vocabularyEnergyScoreLabel = "vocabulary_energy_score_label"
-    case vocabularyEnergyTier1Title = "vocabulary_energy_tier_1_title"
-    case vocabularyEnergyTier1Subtitle = "vocabulary_energy_tier_1_subtitle"
-    case vocabularyEnergyTier2Title = "vocabulary_energy_tier_2_title"
-    case vocabularyEnergyTier2Subtitle = "vocabulary_energy_tier_2_subtitle"
-    case vocabularyEnergyTier3Title = "vocabulary_energy_tier_3_title"
-    case vocabularyEnergyTier3Subtitle = "vocabulary_energy_tier_3_subtitle"
-    case vocabularyEnergyTier4Title = "vocabulary_energy_tier_4_title"
-    case vocabularyEnergyTier4Subtitle = "vocabulary_energy_tier_4_subtitle"
-    case vocabularyEnergyTier5Title = "vocabulary_energy_tier_5_title"
-    case vocabularyEnergyTier5Subtitle = "vocabulary_energy_tier_5_subtitle"
-    case vocabularyEnergyNextHint = "vocabulary_energy_next_hint"
-    case vocabularyEnergyLast7Days = "vocabulary_energy_last_7_days"
-    case vocabularyEnergyLast7DaysPending = "vocabulary_energy_last_7_days_pending"
     case noWordsYet = "no_words_yet"
     case goAddWords = "go_add_words"
+    case goToLibraryAdd = "go_to_library_add"
     case dailyMotivation = "daily_motivation"
     case wordsToReview = "words_to_review"
+    case dueTodayMasteredFormat = "due_today_mastered_format"
     case aiSmartFill = "ai_smart_fill"
+    case checkIn = "check_in"
+    case consecutiveDays = "consecutive_days"
+    case masteredCountFormat = "mastered_count_format"
+    case studyFromSheetFormat = "study_from_sheet_format"
     
     // MARK: - Settings
     case account = "account"
@@ -231,6 +219,19 @@ enum LocalizedKey: String {
     case skip = "skip"
     case addAnyway = "add_anyway"
     
+    // MARK: - Onboarding
+    case onboardingValueProposition = "onboarding_value_proposition"
+    case onboardingContinue = "onboarding_continue"
+    case onboardingBack = "onboarding_back"
+    case onboardingLearnTitle = "onboarding_learn_title"
+    case onboardingLearnSubtitle = "onboarding_learn_subtitle"
+    case onboardingNativeTitle = "onboarding_native_title"
+    case onboardingNativeSubtitle = "onboarding_native_subtitle"
+    case onboardingComplete = "onboarding_complete"
+    case onboardingStepFormat = "onboarding_step_format"
+    case freeTrialWelcomeTitle = "free_trial_welcome_title"
+    case freeTrialWelcomeMessage = "free_trial_welcome_message"
+    
     // MARK: - Study
     case focusMode = "focus_mode"
     case recommendedReview = "recommended_review"
@@ -247,12 +248,17 @@ enum LocalizedKey: String {
     case remembered = "remembered"
     case dailyGoal = "daily_goal"
     case clickToFlip = "click_to_flip"
+    case swipeReviewHint = "swipe_review_hint"
     case question = "question"
     case answer = "answer"
     case aiUpdateExample = "ai_update_example"
+    case readExampleSentence = "read_example_sentence"
     case reviewPrompt = "review_prompt"
     case reviewAgain = "review_again"
     case later = "later"
+    case endReview = "end_review"
+    case endReviewConfirmTitle = "end_review_confirm_title"
+    case endReviewConfirmMessage = "end_review_confirm_message"
     case allWordsReviewed = "all_words_reviewed"
     case todayWordsReviewed = "today_words_reviewed"
     case goAddNewWords = "go_add_new_words"
@@ -261,6 +267,60 @@ enum LocalizedKey: String {
     case selectWordSheet = "select_word_sheet"
     case allSheets = "all_sheets"
     case playPronunciation = "play_pronunciation"
+    case comboStreak = "combo_streak"
+    case comboMultiplier = "combo_multiplier"
+    case sessionProgress = "session_progress"
+    case greatJob = "great_job"
+    case synonyms = "synonyms"
+    case antonyms = "antonyms"
+    
+    // MARK: - Exercise
+    case exerciseWordBank = "exercise_word_bank"
+    case exerciseFillHint = "exercise_fill_hint"
+    case exerciseCheck = "exercise_check"
+    case exerciseReshuffle = "exercise_reshuffle"
+    case exerciseScore = "exercise_score"
+    case exerciseAllCorrect = "exercise_all_correct"
+    case exerciseAINewSet = "exercise_ai_new_set"
+    case exerciseAINewSetHint = "exercise_ai_new_set_hint"
+    case exerciseAIReplaceTitle = "exercise_ai_replace_title"
+    case exerciseAIReplaceMessage = "exercise_ai_replace_message"
+    case exercisePickForm = "exercise_pick_form"
+    case exerciseEmptyNoWords = "exercise_empty_no_words"
+    case exerciseEmptyAllUnlearned = "exercise_empty_all_unlearned"
+    case exerciseEmptyNoDue = "exercise_empty_no_due"
+    case exerciseEmptyNoExamples = "exercise_empty_no_examples"
+    case exerciseCorrectAnswer = "exercise_correct_answer"
+    case exerciseGenerating = "exercise_generating"
+    case exerciseAIParseFailed = "exercise_ai_parse_failed"
+    case exerciseStart = "exercise_start"
+    case exerciseStartDescription = "exercise_start_description"
+    case exerciseEnd = "exercise_end"
+    case exerciseModeCloze = "exercise_mode_cloze"
+    case exerciseModeGuess = "exercise_mode_guess"
+    case guessBuzz = "guess_buzz"
+    case guessSkip = "guess_skip"
+    case guessSubmit = "guess_submit"
+    case guessAnswerPlaceholder = "guess_answer_placeholder"
+    case guessTryAgain = "guess_try_again"
+    case guessPotentialScoreA11y = "guess_potential_score_a11y"
+    case guessCompletedTitle = "guess_completed_title"
+    case guessCompletedScore = "guess_completed_score"
+    case guessPlayAgain = "guess_play_again"
+    case guessEmptyNoEligible = "guess_empty_no_eligible"
+    case guessRevealedA11y = "guess_revealed_a11y"
+    case guessBuzzHint = "guess_buzz_hint"
+    case guessNext = "guess_next"
+    case guessCorrect = "guess_correct"
+    case guessWrong = "guess_wrong"
+    case guessStart = "guess_start"
+    case guessReadyRules = "guess_ready_rules"
+    case guessLeaveTitle = "guess_leave_title"
+    case guessLeaveMessage = "guess_leave_message"
+    case guessLeaveConfirm = "guess_leave_confirm"
+    case guessLastScore = "guess_last_score"
+    case guessBestScore = "guess_best_score"
+    case guessRecentScores = "guess_recent_scores"
     
     // MARK: - Batch Add
     case batchAddWords = "batch_add_words"
@@ -305,6 +365,50 @@ enum LocalizedKey: String {
     case searchWords = "search_words"
     case noResults = "no_results"
     case tryOtherKeywords = "try_other_keywords"
+    case newSheet = "new_sheet"
+    case newSheetPlaceholder = "new_sheet_placeholder"
+    case editSheet = "edit_sheet"
+    case sheetName = "sheet_name"
+    case sheetAppearance = "sheet_appearance"
+    case sheetIcon = "sheet_icon"
+    case sheetColor = "sheet_color"
+    case pinSheet = "pin_sheet"
+    case unpinSheet = "unpin_sheet"
+    case pinnedSheets = "pinned_sheets"
+    case otherSheets = "other_sheets"
+    case reorderSheets = "reorder_sheets"
+    case mergeSheets = "merge_sheets"
+    case mergeInto = "merge_into"
+    case mergeSelectSources = "merge_select_sources"
+    case mergeSelectTarget = "merge_select_target"
+    case mergeConfirm = "merge_confirm"
+    case mergeDuplicatesTitle = "merge_duplicates_title"
+    case mergeDuplicatesMessage = "merge_duplicates_message"
+    case keepBetterProgress = "keep_better_progress"
+    case keepBoth = "keep_both"
+    case deleteSheet = "delete_sheet"
+    case deleteSheetMessage = "delete_sheet_message"
+    case moveToSheet = "move_to_sheet"
+    case moveWords = "move_words"
+    case selectWords = "select_words"
+    case selectedWordsCount = "selected_words_count"
+    case libraryFilterGrouped = "library_filter_grouped"
+    case libraryFilterUnlearned = "library_filter_unlearned"
+    case libraryFilterDue = "library_filter_due"
+    case libraryFilterByMonth = "library_filter_by_month"
+    case noUnlearnedWords = "no_unlearned_words"
+    case noDueReviewWords = "no_due_review_words"
+    case emptySheet = "empty_sheet"
+    case wordCountFormat = "word_count_format"
+    case wordCountOne = "word_count_one"
+    case sheetNameEmpty = "sheet_name_empty"
+    case sheetNameExists = "sheet_name_exists"
+    case mergeNeedSourceTarget = "merge_need_source_target"
+    case deleteWordsConfirmTitle = "delete_words_confirm_title"
+    case deleteWordsConfirmMessage = "delete_words_confirm_message"
+    case deleteWordConfirmTitle = "delete_word_confirm_title"
+    case deleteWordConfirmMessage = "delete_word_confirm_message"
+    case noTargetSheet = "no_target_sheet"
     
     // MARK: - About
     case version = "version"

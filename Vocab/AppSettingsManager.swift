@@ -37,6 +37,26 @@ enum AppLanguage: String, CaseIterable {
             return "한국어"
         }
     }
+
+    /// AVSpeechSynthesizer 使用的 BCP 47 语言码
+    var speechLanguageCode: String {
+        switch self {
+        case .chinese:
+            return "zh-CN"
+        case .chineseTraditional:
+            return "zh-TW"
+        case .english:
+            return "en-US"
+        case .japanese:
+            return "ja-JP"
+        case .french:
+            return "fr-FR"
+        case .spanish:
+            return "es-ES"
+        case .korean:
+            return "ko-KR"
+        }
+    }
 }
 
 enum AppearanceMode: String, CaseIterable {

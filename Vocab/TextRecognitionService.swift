@@ -43,10 +43,19 @@ class TextRecognitionService {
                     return
                 }
                 
-                // 提取所有识别到的文字
-                var allWords: Set<String> = []
+                // 按阅读顺序排列（从上到下、同一行从左到右）
+                // Vision boundingBox 原点在左下角，maxY 越大越靠上
+                let sortedObservations = observations.sorted { lhs, rhs in
+                    if abs(lhs.boundingBox.maxY - rhs.boundingBox.maxY) > 0.02 {
+                        return lhs.boundingBox.maxY > rhs.boundingBox.maxY
+                    }
+                    return lhs.boundingBox.minX < rhs.boundingBox.minX
+                }
                 
-                for observation in observations {
+                var orderedWords: [String] = []
+                var seenWords: Set<String> = []
+                
+                for observation in sortedObservations {
                     // 如果指定了区域，检查观察结果是否在区域内
                     if let region = region {
                         let observationRect = observation.boundingBox
@@ -82,12 +91,12 @@ class TextRecognitionService {
                             word.count >= 2 && word.allSatisfy { $0.isLetter }
                         }
                     
-                    allWords.formUnion(words)
+                    for word in words where seenWords.insert(word).inserted {
+                        orderedWords.append(word)
+                    }
                 }
                 
-                // 转换为数组并排序
-                let sortedWords = Array(allWords).sorted()
-                continuation.resume(returning: sortedWords)
+                continuation.resume(returning: orderedWords)
             }
             
             // 配置识别请求

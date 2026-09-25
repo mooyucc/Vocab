@@ -37,17 +37,19 @@ class SpeechManager: ObservableObject {
     /// 播放单词读音
     /// - Parameters:
     ///   - text: 要播放的文本（通常是单词）
-    ///   - language: 语言代码，默认为 "en-US"（英语）
+    ///   - language: 语言代码；默认跟随设置中的学习语言
     @MainActor
-    func speak(_ text: String, language: String = "en-US") {
+    func speak(_ text: String, language: String? = nil) {
         // 如果正在播放，先停止
         if isSpeaking {
             stopSpeaking()
         }
         
+        let languageCode = language ?? AppSettingsManager.shared.targetLanguage.speechLanguageCode
+        
         // 创建语音合成话语
         let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: language)
+        utterance.voice = AVSpeechSynthesisVoice(language: languageCode)
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
         utterance.pitchMultiplier = 1.0
         utterance.volume = 1.0

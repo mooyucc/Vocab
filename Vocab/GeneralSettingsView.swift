@@ -51,8 +51,7 @@ struct GeneralSettingsView: View {
             // 学习目标语言设置
             Section {
                 Picker(LocalizedKey.targetLanguage.rawValue.localized, selection: $settingsManager.targetLanguage) {
-                    // 目前学习目标语言不区分简体/繁体，隐藏繁体选项，避免混淆
-                    ForEach(AppLanguage.allCases.filter { $0 != .chineseTraditional }, id: \.self) { language in
+                    ForEach(AppLanguage.allCases, id: \.self) { language in
                         Text(language.displayName)
                             .tag(language)
                     }

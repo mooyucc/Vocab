@@ -82,7 +82,29 @@ private func textAppearsInLearningLanguage(_ text: String, learningLanguage: App
     let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
     if t.isEmpty { return true }
     let counts = ScriptCounts.count(t)
-    return counts.appearsInLanguage(LearningLanguageScript.from(learningLanguage))
+    guard counts.appearsInLanguage(LearningLanguageScript.from(learningLanguage)) else {
+        return false
+    }
+    return chineseVariantMatches(t, language: learningLanguage)
+}
+
+/// 用系统简繁转换判断字形是否与学习语言一致（相同汉字不区分）。
+private func chineseVariantMatches(_ text: String, language: AppLanguage) -> Bool {
+    switch language {
+    case .chinese:
+        return transformedChinese(text, toTraditional: false) == text
+    case .chineseTraditional:
+        return transformedChinese(text, toTraditional: true) == text
+    default:
+        return true
+    }
+}
+
+private func transformedChinese(_ text: String, toTraditional: Bool) -> String {
+    let mutable = NSMutableString(string: text)
+    let transform = toTraditional ? "Simplified-Traditional" : "Traditional-Simplified"
+    CFStringTransform(mutable, nil, transform as CFString, false)
+    return mutable as String
 }
 
 // MARK: - View
