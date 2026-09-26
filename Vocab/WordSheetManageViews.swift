@@ -65,27 +65,37 @@ struct WordSheetEditorView: View {
                                     colorName = color
                                     VocabHaptics.impact(.light)
                                 } label: {
-                                    Circle()
-                                        .fill(WordSheetAppearance.color(named: color))
+                                    colorSwatch(for: color)
                                         .frame(width: 32, height: 32)
                                         .overlay {
                                             if colorName == color {
                                                 Image(systemName: "checkmark")
                                                     .font(.caption.weight(.bold))
-                                                    .foregroundStyle(.white)
+                                                    .foregroundStyle(color == "accent" || color == "orange" || color == "pink" || color == "gray" ? Color.vocabInk : .white)
                                             }
                                         }
                                         .frame(width: 44, height: 44)
                                         .contentShape(Circle())
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(color)
+                                .accessibilityLabel(color == "accent" ? LocalizedKey.resetSheetColor.rawValue.localized : color)
                                 .accessibilityAddTraits(colorName == color ? .isSelected : [])
                             }
                         }
                     }
+                    
+                    if colorName != "accent" {
+                        Button {
+                            colorName = "accent"
+                            VocabHaptics.impact(.light)
+                        } label: {
+                            Label(LocalizedKey.resetSheetColor.rawValue.localized, systemImage: "arrow.counterclockwise")
+                        }
+                    }
                 } header: {
                     Text(LocalizedKey.sheetColor)
+                } footer: {
+                    Text(LocalizedKey.resetSheetColorHint)
                 }
                 
                 Section {
@@ -130,7 +140,30 @@ struct WordSheetEditorView: View {
     }
     
     private var selectedColor: Color {
-        WordSheetAppearance.color(named: colorName)
+        if colorName == "accent" || colorName.isEmpty {
+            return Color.vocabBrand
+        }
+        return WordSheetAppearance.color(named: colorName)
+    }
+    
+    @ViewBuilder
+    private func colorSwatch(for color: String) -> some View {
+        if color == "accent" {
+            Circle()
+                .fill(
+                    AngularGradient(
+                        colors: [Color.vocabBrand, Color.vocabSurface, Color.vocabGold, Color.vocabBrand],
+                        center: .center
+                    )
+                )
+                .overlay {
+                    Circle()
+                        .strokeBorder(Color.vocabInk.opacity(0.12), lineWidth: 1)
+                }
+        } else {
+            Circle()
+                .fill(WordSheetAppearance.color(named: color))
+        }
     }
     
     private func save() {
@@ -215,7 +248,7 @@ struct MergeSheetsView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(sheet.localizedDisplayName)
                                         .foregroundStyle(.primary)
-                                    Text(LocalizedFormat.wordCount(sheet.words?.count ?? 0))
+                                    Text(LocalizedFormat.wordCount(sheet.wordCount))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -439,7 +472,7 @@ struct MergeIntoSheetPicker: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(sheet.localizedDisplayName)
                                         .foregroundStyle(.primary)
-                                    Text(LocalizedFormat.wordCount(sheet.words?.count ?? 0))
+                                    Text(LocalizedFormat.wordCount(sheet.wordCount))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -536,7 +569,7 @@ struct MoveWordsSheetPicker: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(sheet.localizedDisplayName)
                                         .foregroundStyle(.primary)
-                                    Text(LocalizedFormat.wordCount(sheet.words?.count ?? 0))
+                                    Text(LocalizedFormat.wordCount(sheet.wordCount))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }

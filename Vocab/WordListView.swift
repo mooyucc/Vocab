@@ -10,14 +10,13 @@ import SwiftData
 
 struct WordListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var localizedString = LocalizedString.shared
     @Query private var allSheets: [WordSheet]
     
     @State private var searchText: String = ""
     @State private var filter: WordListFilter = .grouped
     @State private var showAddWord = false
-    @State private var expandedSheetIds: Set<UUID> = []
+    @State private var openedSheetSession: OpenedSheetSession?
     @State private var selectedWord: Word?
     @State private var isSelectingWords = false
     @State private var selectedWordsById: [UUID: Word] = [:]
@@ -31,15 +30,9 @@ struct WordListView: View {
     @State private var sheetToDelete: WordSheet?
     @State private var wordToDelete: Word?
     @State private var showDeleteWordsConfirm = false
-    @State private var wordCounts: [UUID: Int] = [:]
-    @State private var countRefreshGeneration = 0
     
     private var needsWordQuery: Bool {
-        !searchText.isEmpty || filter == .unlearned || filter == .dueReview
-    }
-    
-    private var selectedWordIds: Set<UUID> {
-        Set(selectedWordsById.keys)
+        !searchText.isEmpty
     }
     
     private var sortedSheets: [WordSheet] {
@@ -48,6 +41,8 @@ struct WordListView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
+            LibraryAtmosphereBackground()
+            
             VStack(spacing: 0) {
                 header
                 if needsWordQuery {
@@ -65,31 +60,41 @@ struct WordListView: View {
                 addWordButton
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.vocabLibraryCanvas)
+        .toolbarBackground(Color.vocabLibraryCanvas, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
         .safeAreaInset(edge: .bottom) {
-            if isSelectingWords {
+            if isSelectingWords && openedSheetSession == nil {
                 selectionBar
             }
         }
-        .sheet(isPresented: $showAddWord, onDismiss: scheduleCountRefresh) {
+        .sheet(isPresented: $showAddWord) {
             AddWordView()
+        }
+        .sheet(item: $openedSheetSession) { session in
+            SheetWordsBrowserView(
+                sheet: session.sheet,
+                prefilteredWords: session.words,
+                isSelecting: $isSelectingWords,
+                selectedWordsById: $selectedWordsById
+            )
         }
         .sheet(item: $selectedWord) { word in
             wordDetailSheet(word)
         }
-        .sheet(item: $editorSession, onDismiss: scheduleCountRefresh) { session in
+        .sheet(item: $editorSession) { session in
             WordSheetEditorView(sheet: session.sheet)
         }
-        .sheet(isPresented: $showMerge, onDismiss: scheduleCountRefresh) {
+        .sheet(isPresented: $showMerge) {
             MergeSheetsView(presetSourceIds: mergePresetSourceIds)
         }
-        .sheet(item: $mergeSession, onDismiss: scheduleCountRefresh) { session in
+        .sheet(item: $mergeSession) { session in
             MergeIntoSheetPicker(source: session.sheet)
         }
-        .sheet(isPresented: $showReorder, onDismiss: scheduleCountRefresh) {
+        .sheet(isPresented: $showReorder) {
             ReorderSheetsView()
         }
-        .sheet(isPresented: $showMovePicker, onDismiss: scheduleCountRefresh) {
+        .sheet(isPresented: $showMovePicker) {
             MoveWordsSheetPicker(words: wordsToMove)
         }
         .alert(
@@ -104,7 +109,6 @@ struct WordListView: View {
                     modelContext.delete(sheetToDelete)
                     try? modelContext.save()
                     VocabHaptics.notify(.warning)
-                    scheduleCountRefresh()
                 }
                 sheetToDelete = nil
             }
@@ -113,7 +117,7 @@ struct WordListView: View {
             }
         } message: {
             if let sheetToDelete {
-                Text(String(format: LocalizedKey.deleteSheetMessage.rawValue.localized, sheetToDelete.localizedDisplayName, wordCount(for: sheetToDelete.id)))
+                Text(String(format: LocalizedKey.deleteSheetMessage.rawValue.localized, sheetToDelete.localizedDisplayName, sheetToDelete.wordCount))
             }
         }
         .alert(
@@ -151,15 +155,7 @@ struct WordListView: View {
         }
         .modifier(SelectionHapticsModifier(count: selectedWordsById.count))
         .onAppear {
-            scheduleCountRefresh()
-        }
-        .onChange(of: allSheets.count) { _, _ in
-            scheduleCountRefresh()
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                scheduleCountRefresh()
-            }
+            WordSheetService.ensureCountsUpToDate(in: modelContext)
         }
     }
     
@@ -169,6 +165,8 @@ struct WordListView: View {
                 Text(LocalizedKey.myWordList)
                     .font(.largeTitle)
                     .fontWeight(.black)
+                    .fontDesign(.rounded)
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 
                 if isSelectingWords {
@@ -179,6 +177,7 @@ struct WordListView: View {
                         }
                     }
                     .fontWeight(.semibold)
+                    .foregroundStyle(.white)
                 } else {
                     Menu {
                         Button {
@@ -206,11 +205,12 @@ struct WordListView: View {
                             Label(LocalizedKey.selectWords.rawValue.localized, systemImage: "checkmark.circle")
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.title2)
-                            .foregroundStyle(.primary)
+                        Image(systemName: "square.grid.2x2.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.white)
                             .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
+                            .background(Color.vocabLibraryControl, in: Circle())
+                            .contentShape(Circle())
                     }
                     .accessibilityLabel(LocalizedKey.more.rawValue.localized)
                 }
@@ -218,29 +218,36 @@ struct WordListView: View {
             
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.78))
                     .padding(.leading, 12)
                 
-                TextField(LocalizedKey.searchWords.rawValue.localized, text: $searchText)
+                TextField(
+                    "",
+                    text: $searchText,
+                    prompt: Text(LocalizedKey.searchWords.rawValue.localized)
+                        .foregroundStyle(.white.opacity(0.72))
+                )
                     .textFieldStyle(.plain)
+                    .foregroundStyle(.white)
+                    .tint(.white)
                     .padding(.vertical, 12)
             }
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(Color.white.opacity(0.22))
+            .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.card, style: .continuous))
             .accessibilityLabel(LocalizedKey.searchWords.rawValue.localized)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(WordListFilter.allCases) { item in
-                        filterChip(item)
-                    }
+            HStack(spacing: 4) {
+                ForEach(WordListFilter.allCases) { item in
+                    filterChip(item)
                 }
             }
+            .padding(4)
+            .background(Color.black.opacity(0.18), in: Capsule())
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
         .padding(.bottom, 16)
-        .background(Color(.systemBackground))
     }
     
     private func filterChip(_ item: WordListFilter) -> some View {
@@ -253,11 +260,11 @@ struct WordListView: View {
         } label: {
             Label(item.titleKey.rawValue.localized, systemImage: item.systemImage)
                 .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .frame(minHeight: 36)
-                .foregroundStyle(selected ? Color.white : Color.primary)
-                .background(selected ? Color.vocabBrand : Color(.secondarySystemBackground), in: Capsule())
+                .foregroundStyle(selected ? Color.vocabInk : Color.white.opacity(0.92))
+                .background(selected ? Color.vocabSurface : Color.clear, in: Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -282,20 +289,13 @@ struct WordListView: View {
     private func emptyState(allWordsEmpty: Bool) -> some View {
         let title: String = {
             if !searchText.isEmpty { return LocalizedKey.noResults.rawValue.localized }
-            switch filter {
-            case .unlearned: return LocalizedKey.noUnlearnedWords.rawValue.localized
-            case .dueReview: return LocalizedKey.noDueReviewWords.rawValue.localized
-            case .grouped, .byMonth: return LocalizedKey.noWordsYet.rawValue.localized
-            }
+            return LocalizedKey.noWordsYet.rawValue.localized
         }()
         let description: String = {
             if !searchText.isEmpty { return LocalizedKey.tryOtherKeywords.rawValue.localized }
-            switch filter {
-            case .unlearned, .dueReview: return LocalizedKey.goAddWords.rawValue.localized
-            case .grouped, .byMonth: return LocalizedKey.goAddWords.rawValue.localized
-            }
+            return LocalizedKey.goAddWords.rawValue.localized
         }()
-        let icon = searchText.isEmpty ? (filter == .dueReview ? "clock" : "book.closed") : "magnifyingglass"
+        let icon = searchText.isEmpty ? "book.closed" : "magnifyingglass"
         
         if searchText.isEmpty && allWordsEmpty {
             ContentUnavailableView {
@@ -303,6 +303,7 @@ struct WordListView: View {
             } description: {
                 Text(LocalizedKey.goAddWords)
             }
+            .foregroundStyle(.white)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             ContentUnavailableView {
@@ -310,6 +311,7 @@ struct WordListView: View {
             } description: {
                 Text(description)
             }
+            .foregroundStyle(.white)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
             .dismissKeyboardOnTap()
@@ -324,16 +326,16 @@ struct WordListView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(group.title)
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.7))
                                 .padding(.horizontal, 4)
-                            ForEach(group.sheets) { sheet in
-                                lazySheetSection(sheet)
+                            ForEach(Array(group.sheets.enumerated()), id: \.element.id) { index, sheet in
+                                lazySheetSection(sheet, accentIndex: index)
                             }
                         }
                     }
                 } else {
-                    ForEach(sortedSheets) { sheet in
-                        lazySheetSection(sheet)
+                    ForEach(Array(sortedSheets.enumerated()), id: \.element.id) { index, sheet in
+                        lazySheetSection(sheet, accentIndex: index)
                     }
                 }
             }
@@ -357,16 +359,16 @@ struct WordListView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(group.title)
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.7))
                                 .padding(.horizontal, 4)
-                            ForEach(group.sheets) { sheet in
-                                querySheetSection(sheet, snapshot: snapshot)
+                            ForEach(Array(group.sheets.enumerated()), id: \.element.id) { index, sheet in
+                                querySheetSection(sheet, snapshot: snapshot, accentIndex: index)
                             }
                         }
                     }
                 } else {
-                    ForEach(snapshot.visibleSheets) { sheet in
-                        querySheetSection(sheet, snapshot: snapshot)
+                    ForEach(Array(snapshot.visibleSheets.enumerated()), id: \.element.id) { index, sheet in
+                        querySheetSection(sheet, snapshot: snapshot, accentIndex: index)
                     }
                 }
             }
@@ -378,27 +380,14 @@ struct WordListView: View {
         .dismissKeyboardOnTap()
     }
     
-    private func lazySheetSection(_ sheet: WordSheet) -> some View {
-        let isExpanded = expandedSheetIds.contains(sheet.id)
-        return SheetSection(
+    private func lazySheetSection(_ sheet: WordSheet, accentIndex: Int) -> some View {
+        SheetSection(
             sheet: sheet,
-            words: nil,
-            wordCount: wordCounts[sheet.id],
-            isExpanded: isExpanded,
-            isSelecting: isSelectingWords,
-            selectedWordIds: selectedWordIds,
-            onToggle: {
-                toggleSheet(sheet.id)
-            },
-            onDeleteWord: { word in
-                wordToDelete = word
-            },
-            onWordTap: { word in
-                handleWordTap(word)
-            },
-            onMoveWord: { word in
-                wordsToMove = [word]
-                showMovePicker = true
+            wordCount: sheet.wordCount,
+            learnedCount: sheet.learnedCount,
+            accentIndex: accentIndex,
+            onOpen: {
+                openedSheetSession = OpenedSheetSession(sheet: sheet)
             },
             onPin: {
                 sheet.isPinned.toggle()
@@ -413,35 +402,19 @@ struct WordListView: View {
             },
             onDeleteSheet: {
                 sheetToDelete = sheet
-            },
-            onLoadedCount: { count in
-                wordCounts[sheet.id] = count
             }
         )
     }
     
-    private func querySheetSection(_ sheet: WordSheet, snapshot: WordListSnapshot) -> some View {
-        let isExpanded = expandedSheetIds.contains(sheet.id)
+    private func querySheetSection(_ sheet: WordSheet, snapshot: WordListSnapshot, accentIndex: Int) -> some View {
         let sectionWords = snapshot.words(for: sheet)
         return SheetSection(
             sheet: sheet,
-            words: isExpanded ? sectionWords : [],
             wordCount: sectionWords.count,
-            isExpanded: isExpanded,
-            isSelecting: isSelectingWords,
-            selectedWordIds: selectedWordIds,
-            onToggle: {
-                toggleSheet(sheet.id)
-            },
-            onDeleteWord: { word in
-                wordToDelete = word
-            },
-            onWordTap: { word in
-                handleWordTap(word)
-            },
-            onMoveWord: { word in
-                wordsToMove = [word]
-                showMovePicker = true
+            learnedCount: sectionWords.filter(\.learned).count,
+            accentIndex: accentIndex,
+            onOpen: {
+                openedSheetSession = OpenedSheetSession(sheet: sheet, words: sectionWords)
             },
             onPin: {
                 sheet.isPinned.toggle()
@@ -484,8 +457,8 @@ struct WordListView: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(.white)
                 .frame(width: 56, height: 56)
-                .background(LinearGradient.vocabBrandProgress, in: Circle())
-                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                .background(Color.vocabBrand, in: Circle())
+                .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(LocalizedKey.addNewWord.rawValue.localized)")
@@ -539,21 +512,17 @@ struct WordListView: View {
         }
     }
     
-    private func toggleSheet(_ id: UUID) {
-        if expandedSheetIds.contains(id) {
-            expandedSheetIds.remove(id)
+    private func toggleWordSelection(_ word: Word) {
+        if selectedWordsById[word.id] != nil {
+            selectedWordsById.removeValue(forKey: word.id)
         } else {
-            expandedSheetIds.insert(id)
+            selectedWordsById[word.id] = word
         }
     }
     
     private func handleWordTap(_ word: Word) {
         if isSelectingWords {
-            if selectedWordsById[word.id] != nil {
-                selectedWordsById.removeValue(forKey: word.id)
-            } else {
-                selectedWordsById[word.id] = word
-            }
+            toggleWordSelection(word)
         } else {
             selectedWord = word
         }
@@ -561,58 +530,20 @@ struct WordListView: View {
     
     private func deleteWord(_ word: Word) {
         selectedWordsById.removeValue(forKey: word.id)
-        if let sheetId = word.sheet?.id, let count = wordCounts[sheetId] {
-            wordCounts[sheetId] = max(0, count - 1)
-        }
+        WordSheetService.noteWillDelete(word)
         modelContext.delete(word)
         try? modelContext.save()
     }
     
     private func deleteSelectedWords() {
         for word in selectedWordsById.values {
+            WordSheetService.noteWillDelete(word)
             modelContext.delete(word)
         }
         try? modelContext.save()
         selectedWordsById.removeAll()
         isSelectingWords = false
-        scheduleCountRefresh()
         VocabHaptics.notify(.warning)
-    }
-    
-    private func wordCount(for sheetId: UUID) -> Int {
-        if let cached = wordCounts[sheetId] {
-            return cached
-        }
-        return fetchWordCount(for: sheetId)
-    }
-    
-    private func fetchWordCount(for sheetId: UUID) -> Int {
-        let target = sheetId
-        let descriptor = FetchDescriptor<Word>(
-            predicate: #Predicate<Word> { word in
-                word.sheet?.id == target
-            }
-        )
-        return (try? modelContext.fetchCount(descriptor)) ?? 0
-    }
-    
-    private func scheduleCountRefresh() {
-        countRefreshGeneration += 1
-        let generation = countRefreshGeneration
-        Task { @MainActor in
-            await Task.yield()
-            guard generation == countRefreshGeneration else { return }
-            refreshWordCounts()
-        }
-    }
-    
-    private func refreshWordCounts() {
-        var next: [UUID: Int] = [:]
-        next.reserveCapacity(allSheets.count)
-        for sheet in allSheets {
-            next[sheet.id] = fetchWordCount(for: sheet.id)
-        }
-        wordCounts = next
     }
 }
 
@@ -647,14 +578,6 @@ private struct WordListSnapshot {
                 word.definition.localizedCaseInsensitiveContains(searchText)
             }
         }
-        switch filter {
-        case .grouped, .byMonth:
-            break
-        case .unlearned:
-            list = list.filter { !$0.learned }
-        case .dueReview:
-            list = SpacedRepetition.dueWords(from: list)
-        }
         filteredWords = list
         
         var grouped: [UUID: [Word]] = [:]
@@ -665,23 +588,18 @@ private struct WordListSnapshot {
         }
         self.grouped = grouped
         
-        let visible: [WordSheet]
-        switch filter {
-        case .grouped, .byMonth:
-            visible = searchText.isEmpty ? sorted : sorted.filter { !(grouped[$0.id]?.isEmpty ?? true) }
-        case .unlearned, .dueReview:
-            visible = sorted.filter { !(grouped[$0.id]?.isEmpty ?? true) }
-        }
-        visibleSheets = visible
+        visibleSheets = searchText.isEmpty
+            ? sorted
+            : sorted.filter { !(grouped[$0.id]?.isEmpty ?? true) }
         
-        if !searchText.isEmpty || filter == .unlearned || filter == .dueReview {
+        if !searchText.isEmpty {
             isEmpty = list.isEmpty
         } else {
             isEmpty = sheets.isEmpty && words.isEmpty
         }
         
         if filter == .byMonth {
-            monthGroups = Self.makeMonthGroups(from: visible)
+            monthGroups = Self.makeMonthGroups(from: visibleSheets)
         } else {
             monthGroups = []
         }
@@ -717,6 +635,19 @@ private struct MergeSheetSession: Identifiable {
     let sheet: WordSheet
 }
 
+private struct OpenedSheetSession: Identifiable {
+    let id: UUID
+    let sheet: WordSheet
+    /// 搜索过滤后的单词；nil 表示使用词库内全部单词
+    let words: [Word]?
+    
+    init(sheet: WordSheet, words: [Word]? = nil) {
+        self.id = sheet.id
+        self.sheet = sheet
+        self.words = words
+    }
+}
+
 private struct SelectionHapticsModifier: ViewModifier {
     let count: Int
     
@@ -732,176 +663,437 @@ private struct SelectionHapticsModifier: ViewModifier {
 struct SheetSection: View {
     @ObservedObject private var localizedString = LocalizedString.shared
     let sheet: WordSheet
-    var words: [Word]? = nil
     var wordCount: Int? = nil
-    let isExpanded: Bool
-    var isSelecting: Bool = false
-    var selectedWordIds: Set<UUID> = []
-    let onToggle: () -> Void
-    let onDeleteWord: (Word) -> Void
-    let onWordTap: (Word) -> Void
-    var onMoveWord: (Word) -> Void = { _ in }
+    var learnedCount: Int? = nil
+    var accentIndex: Int = 0
+    let onOpen: () -> Void
     var onPin: () -> Void = {}
     var onEdit: () -> Void = {}
     var onMerge: () -> Void = {}
     var onDeleteSheet: () -> Void = {}
-    var onLoadedCount: (Int) -> Void = { _ in }
+    
+    private var accent: (fill: Color, foreground: Color) {
+        let name = sheet.colorName.isEmpty ? "accent" : sheet.colorName
+        if name == "accent" {
+            let palette: [(Color, Color)] = [
+                (Color.vocabBrand, .white),
+                (Color.vocabSurface, Color.vocabInk),
+                (Color.vocabGold, Color.vocabInk)
+            ]
+            return palette[accentIndex % palette.count]
+        }
+        return (sheet.tintColor, leftForeground(for: name))
+    }
+    
+    private func leftForeground(for colorName: String) -> Color {
+        switch colorName {
+        case "orange", "pink", "gray", "yellow":
+            return Color.vocabInk
+        default:
+            return .white
+        }
+    }
+    
+    private var masteryProgress: CGFloat {
+        guard let total = wordCount, total > 0, let learned = learnedCount else { return 0 }
+        return min(1, max(0, CGFloat(learned) / CGFloat(total)))
+    }
+    
+    private var masteryPercent: Int? {
+        guard let total = wordCount, total > 0, let learned = learnedCount else { return nil }
+        return Int((Double(learned) / Double(total) * 100).rounded())
+    }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Button(action: onToggle) {
-                HStack(spacing: 12) {
-                    Image(systemName: sheet.displaySymbolName)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(sheet.tintColor)
-                        .frame(width: 36, height: 36)
-                        .background(sheet.tintColor.opacity(0.12), in: Circle())
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text(sheet.localizedDisplayName)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                            if sheet.isPinned {
-                                Image(systemName: "pin.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(sheet.tintColor)
-                            }
-                        }
-                        Group {
-                            if let wordCount {
-                                Text(wordCount == 0 ? LocalizedKey.emptySheet.rawValue.localized : LocalizedFormat.wordCount(wordCount))
-                            } else {
-                                Text(" ")
-                            }
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(16)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        Button(action: onOpen) {
+            progressCard
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityTitle)
+        .accessibilityValue(masteryPercent.map { "\($0)%" } ?? "")
+        .contextMenu {
+            Button {
+                onPin()
+            } label: {
+                Label(
+                    (sheet.isPinned ? LocalizedKey.unpinSheet : LocalizedKey.pinSheet).rawValue.localized,
+                    systemImage: sheet.isPinned ? "pin.slash" : "pin"
+                )
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(accessibilityTitle)
-            .contextMenu {
-                Button {
-                    onPin()
-                } label: {
-                    Label(
-                        (sheet.isPinned ? LocalizedKey.unpinSheet : LocalizedKey.pinSheet).rawValue.localized,
-                        systemImage: sheet.isPinned ? "pin.slash" : "pin"
-                    )
-                }
-                Button {
-                    onEdit()
-                } label: {
-                    Label(LocalizedKey.editSheet.rawValue.localized, systemImage: "pencil")
-                }
-                Button {
-                    onMerge()
-                } label: {
-                    Label(LocalizedKey.mergeInto.rawValue.localized, systemImage: "square.stack.3d.up.fill")
-                }
-                Button(role: .destructive) {
-                    onDeleteSheet()
-                } label: {
-                    Label(LocalizedKey.deleteSheet.rawValue.localized, systemImage: "trash")
-                }
+            Button {
+                onEdit()
+            } label: {
+                Label(LocalizedKey.editSheet.rawValue.localized, systemImage: "pencil")
             }
+            Button {
+                onMerge()
+            } label: {
+                Label(LocalizedKey.mergeInto.rawValue.localized, systemImage: "square.stack.3d.up.fill")
+            }
+            Button(role: .destructive) {
+                onDeleteSheet()
+            } label: {
+                Label(LocalizedKey.deleteSheet.rawValue.localized, systemImage: "trash")
+            }
+        }
+    }
+    
+    private var progressCard: some View {
+        GeometryReader { geo in
+            let fillLeading: CGFloat = 6
+            let badgeSize: CGFloat = 44
+            let labelMin: CGFloat = 128
+            let chevronSpace: CGFloat = 48 // 36 + trailing 12
+            let spacerMin: CGFloat = 8
+            // Track = pink fill + badge (spacing 0 → tangent). Leave room for chevron.
+            let maxTrackWidth = max(
+                labelMin + badgeSize,
+                geo.size.width - fillLeading - spacerMin - chevronSpace
+            )
+            let minTrackWidth = labelMin + badgeSize
+            let progress = (wordCount ?? 0) > 0 ? masteryProgress : 0
+            let trackWidth = minTrackWidth + (maxTrackWidth - minTrackWidth) * progress
+            let fillWidth = max(labelMin, trackWidth - badgeSize)
             
-            if isExpanded {
-                if let words {
-                    if words.isEmpty {
-                        Text(LocalizedKey.emptySheet.rawValue.localized)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 8)
-                    } else {
-                        ForEach(words) { word in
-                            WordRow(
-                                word: word,
-                                isSelecting: isSelecting,
-                                isSelected: selectedWordIds.contains(word.id),
-                                onDelete: { onDeleteWord(word) },
-                                onTap: { onWordTap(word) },
-                                onMove: { onMoveWord(word) }
-                            )
+            ZStack(alignment: .leading) {
+                Color.vocabLibraryStripe
+                DiagonalStripePattern()
+                    .opacity(0.22)
+                
+                HStack(spacing: 0) {
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
+                            .fill(accent.fill)
+                        
+                        HStack(spacing: 10) {
+                            Image(systemName: sheet.displaySymbolName)
+                                .font(.body.weight(.bold))
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(alignment: .top, spacing: 4) {
+                                    Text(sheet.localizedDisplayName)
+                                        .font(.subheadline.weight(.bold))
+                                        .fontDesign(.rounded)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
+                                    if sheet.isPinned {
+                                        Image(systemName: "pin.fill")
+                                            .font(.caption2.weight(.semibold))
+                                            .padding(.top, 2)
+                                    }
+                                }
+                                Group {
+                                    if let wordCount {
+                                        Text(wordCount == 0
+                                             ? LocalizedKey.emptySheet.rawValue.localized
+                                             : LocalizedFormat.wordCount(wordCount))
+                                    } else {
+                                        Text(" ")
+                                    }
+                                }
+                                .font(.caption2.weight(.medium))
+                                .opacity(0.8)
+                                .lineLimit(1)
+                            }
                         }
+                        .foregroundStyle(accent.foreground)
+                        .padding(.leading, 12)
+                        .padding(.trailing, 8)
                     }
-                } else {
-                    SheetWordsList(
-                        sheet: sheet,
-                        isSelecting: isSelecting,
-                        selectedWordIds: selectedWordIds,
-                        onDeleteWord: onDeleteWord,
-                        onWordTap: onWordTap,
-                        onMoveWord: onMoveWord,
-                        onCount: onLoadedCount
-                    )
+                    .frame(width: fillWidth)
+                    .padding(.vertical, 6)
+                    
+                    masteryBadge
+                        .frame(width: badgeSize, height: badgeSize)
+                    
+                    Spacer(minLength: spacerMin)
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.vocabInk)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Color.vocabSurface))
+                        .padding(.trailing, 12)
                 }
+                .padding(.leading, fillLeading)
+            }
+        }
+        .frame(height: 88)
+        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.hero, style: .continuous))
+    }
+    
+    @ViewBuilder
+    private var masteryBadge: some View {
+        ZStack {
+            Circle()
+                .fill(Color.vocabSurface)
+                .overlay {
+                    Circle()
+                        .strokeBorder(Color.vocabLibraryStripe, lineWidth: 2.5)
+                }
+            if let masteryPercent {
+                Text("\(masteryPercent)%")
+                    .font(.caption2.weight(.bold))
+                    .fontDesign(.rounded)
+                    .monospacedDigit()
+                    .foregroundStyle(Color.vocabInk)
+                    .minimumScaleFactor(0.65)
+                    .lineLimit(1)
+            } else {
+                Text("—")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.vocabInk.opacity(0.45))
             }
         }
     }
     
     private var accessibilityTitle: String {
+        var parts = [sheet.localizedDisplayName]
         if let wordCount {
-            let countText = wordCount == 0
+            parts.append(
+                wordCount == 0
                 ? LocalizedKey.emptySheet.rawValue.localized
                 : LocalizedFormat.wordCount(wordCount)
-            return "\(sheet.localizedDisplayName), \(countText)"
+            )
         }
-        return sheet.localizedDisplayName
+        if let masteryPercent {
+            parts.append("\(masteryPercent)%")
+        }
+        return parts.joined(separator: ", ")
     }
 }
 
-private struct SheetWordsList: View {
+private struct LibraryAtmosphereBackground: View {
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                Color.vocabLibraryCanvas
+                
+                Ellipse()
+                    .fill(Color.vocabLibraryBlob.opacity(0.55))
+                    .frame(width: geo.size.width * 1.15, height: geo.size.width * 0.72)
+                    .blur(radius: 2)
+                    .offset(x: -geo.size.width * 0.22, y: -geo.size.height * 0.08)
+                
+                Ellipse()
+                    .fill(Color.vocabLibraryBlob.opacity(0.4))
+                    .frame(width: geo.size.width * 0.95, height: geo.size.width * 0.7)
+                    .blur(radius: 4)
+                    .offset(x: geo.size.width * 0.35, y: geo.size.height * 0.18)
+                
+                Ellipse()
+                    .fill(Color.black.opacity(0.12))
+                    .frame(width: geo.size.width * 0.8, height: geo.size.width * 0.55)
+                    .blur(radius: 8)
+                    .offset(x: geo.size.width * 0.1, y: geo.size.height * 0.55)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
+/// 词库单词列表弹窗（配色与词库页一致）
+private struct SheetWordsBrowserView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @ObservedObject private var localizedString = LocalizedString.shared
+    
     let sheet: WordSheet
-    var isSelecting: Bool
-    var selectedWordIds: Set<UUID>
-    let onDeleteWord: (Word) -> Void
-    let onWordTap: (Word) -> Void
-    var onMoveWord: (Word) -> Void
-    var onCount: (Int) -> Void
+    var prefilteredWords: [Word]? = nil
+    @Binding var isSelecting: Bool
+    @Binding var selectedWordsById: [UUID: Word]
+    
+    @State private var selectedWord: Word?
+    @State private var wordsToMove: [Word] = []
+    @State private var showMovePicker = false
+    @State private var wordToDelete: Word?
+    @State private var showDeleteWordsConfirm = false
     
     private var words: [Word] {
-        (sheet.words ?? []).sorted { $0.createdAt > $1.createdAt }
+        let all = (sheet.words ?? []).sorted { $0.createdAt > $1.createdAt }
+        guard let prefilteredWords else { return all }
+        let ids = Set(prefilteredWords.map(\.id))
+        return all.filter { ids.contains($0.id) }
+    }
+    
+    private var selectedWordIds: Set<UUID> {
+        Set(selectedWordsById.keys)
     }
     
     var body: some View {
-        Group {
-            if words.isEmpty {
-                Text(LocalizedKey.emptySheet.rawValue.localized)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-            } else {
-                ForEach(words) { word in
-                    WordRow(
-                        word: word,
-                        isSelecting: isSelecting,
-                        isSelected: selectedWordIds.contains(word.id),
-                        onDelete: { onDeleteWord(word) },
-                        onTap: { onWordTap(word) },
-                        onMove: { onMoveWord(word) }
-                    )
+        NavigationStack {
+            ZStack {
+                LibraryAtmosphereBackground()
+                
+                Group {
+                    if words.isEmpty {
+                        Text(LocalizedKey.emptySheet.rawValue.localized)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: 12) {
+                                ForEach(words) { word in
+                                    WordRow(
+                                        word: word,
+                                        isSelecting: isSelecting,
+                                        isSelected: selectedWordIds.contains(word.id),
+                                        onDelete: { wordToDelete = word },
+                                        onTap: { handleWordTap(word) },
+                                        onMove: {
+                                            wordsToMove = [word]
+                                            showMovePicker = true
+                                        }
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+                            .padding(.bottom, isSelecting ? 24 : 16)
+                        }
+                        .scrollDismissesKeyboard(.interactively)
+                    }
+                }
+            }
+            .background(Color.vocabLibraryCanvas)
+            .navigationTitle(sheet.localizedDisplayName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.vocabLibraryCanvas, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(LocalizedKey.done.rawValue.localized) {
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if isSelecting {
+                    selectionBar
                 }
             }
         }
-        .onAppear {
-            onCount(words.count)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color.vocabLibraryCanvas)
+        .sheet(item: $selectedWord) { word in
+            NavigationStack {
+                FlashCardView(word: word, onResult: { _ in
+                    selectedWord = nil
+                }, showActionButtons: false)
+                .padding(.horizontal, 20)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(LocalizedKey.done.rawValue.localized) {
+                            selectedWord = nil
+                        }
+                    }
+                }
+            }
         }
-        .onChange(of: words.count) { _, count in
-            onCount(count)
+        .sheet(isPresented: $showMovePicker) {
+            MoveWordsSheetPicker(words: wordsToMove)
         }
+        .alert(
+            LocalizedKey.deleteWordConfirmTitle.rawValue.localized,
+            isPresented: Binding(
+                get: { wordToDelete != nil },
+                set: { if !$0 { wordToDelete = nil } }
+            )
+        ) {
+            Button(LocalizedKey.delete.rawValue.localized, role: .destructive) {
+                if let wordToDelete {
+                    deleteWord(wordToDelete)
+                    VocabHaptics.notify(.warning)
+                }
+                wordToDelete = nil
+            }
+            Button(LocalizedKey.cancel.rawValue.localized, role: .cancel) {
+                wordToDelete = nil
+            }
+        } message: {
+            if let wordToDelete {
+                Text(String(format: LocalizedKey.deleteWordConfirmMessage.rawValue.localized, wordToDelete.term))
+            }
+        }
+        .alert(
+            LocalizedKey.deleteWordsConfirmTitle.rawValue.localized,
+            isPresented: $showDeleteWordsConfirm
+        ) {
+            Button(LocalizedKey.delete.rawValue.localized, role: .destructive) {
+                deleteSelectedWords()
+            }
+            Button(LocalizedKey.cancel.rawValue.localized, role: .cancel) { }
+        } message: {
+            Text(String(format: LocalizedKey.deleteWordsConfirmMessage.rawValue.localized, selectedWordsById.count))
+        }
+        .modifier(SelectionHapticsModifier(count: selectedWordsById.count))
+    }
+    
+    private var selectionBar: some View {
+        HStack(spacing: 16) {
+            Button {
+                wordsToMove = Array(selectedWordsById.values)
+                showMovePicker = true
+            } label: {
+                Label(LocalizedKey.moveWords.rawValue.localized, systemImage: "folder")
+            }
+            .disabled(selectedWordsById.isEmpty)
+            
+            Spacer()
+            
+            Text(String(format: LocalizedKey.selectedWordsCount.rawValue.localized, selectedWordsById.count))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            
+            Spacer()
+            
+            Button(role: .destructive) {
+                showDeleteWordsConfirm = true
+            } label: {
+                Label(LocalizedKey.delete.rawValue.localized, systemImage: "trash")
+            }
+            .disabled(selectedWordsById.isEmpty)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.bar)
+    }
+    
+    private func handleWordTap(_ word: Word) {
+        if isSelecting {
+            if selectedWordsById[word.id] != nil {
+                selectedWordsById.removeValue(forKey: word.id)
+            } else {
+                selectedWordsById[word.id] = word
+            }
+        } else {
+            selectedWord = word
+        }
+    }
+    
+    private func deleteWord(_ word: Word) {
+        selectedWordsById.removeValue(forKey: word.id)
+        WordSheetService.noteWillDelete(word)
+        modelContext.delete(word)
+        try? modelContext.save()
+    }
+    
+    private func deleteSelectedWords() {
+        for word in selectedWordsById.values {
+            WordSheetService.noteWillDelete(word)
+            modelContext.delete(word)
+        }
+        try? modelContext.save()
+        selectedWordsById.removeAll()
+        isSelecting = false
+        VocabHaptics.notify(.warning)
     }
 }
 
@@ -926,66 +1118,57 @@ struct WordRow: View {
             }
             
             Button(action: onTap) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(word.term)
-                                .font(.headline)
-                            Text(word.partOfSpeech)
-                                .font(.caption)
-                                .fontDesign(.serif)
-                                .foregroundStyle(.secondary)
-                                .italic()
-                        }
-                        
-                        Text(word.definition)
-                            .font(.subheadline)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(word.term)
+                            .font(.headline)
+                        Text(word.partOfSpeech)
+                            .font(.caption)
+                            .fontDesign(.serif)
                             .foregroundStyle(.secondary)
-                        
-                        if showSheetName, let sheetName = word.sheet?.localizedDisplayName {
-                            Text(sheetName)
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                        }
+                            .italic()
                     }
                     
-                    Spacer()
+                    Text(word.definition)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     
-                    if word.learned {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                            .font(.system(size: 16))
-                            .frame(width: 16, height: 16)
-                            .frame(height: 20, alignment: .center)
-                            .alignmentGuide(.top) { d in
-                                d[.top] + 10 - d.height / 2
-                            }
-                    } else {
-                        Circle()
-                            .fill(Color.orange)
-                            .frame(width: 16, height: 16)
-                            .frame(height: 20, alignment: .center)
-                            .alignmentGuide(.top) { d in
-                                d[.top] + 10 - d.height / 2
-                            }
+                    if showSheetName, let sheetName = word.sheet?.localizedDisplayName {
+                        Text(sheetName)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
             
-            if !isSelecting {
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44)
+            HStack(alignment: .center, spacing: 4) {
+                if word.learned {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.vocabTeal)
+                        .font(.system(size: 16))
+                        .frame(width: 16, height: 16)
+                } else {
+                    Circle()
+                        .fill(Color.vocabGold)
+                        .frame(width: 16, height: 16)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("\(LocalizedKey.delete.rawValue.localized) \(word.term)")
+                
+                if !isSelecting {
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(LocalizedKey.delete.rawValue.localized) \(word.term)")
+                }
             }
         }
         .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.vocabSurface)
+        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.card, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(word.term), \(word.partOfSpeech), \(word.definition)")
         .contextMenu {

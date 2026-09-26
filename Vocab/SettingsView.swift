@@ -31,28 +31,7 @@ struct SettingsView: View {
                     if authManager.isSignedIn {
                         // 已登录状态
                         HStack(spacing: 16) {
-                            // 用户头像占位符
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [Color(hex: "FE6A57"), Color(hex: "FE2E69")]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 60, height: 60)
-                                .overlay {
-                                    if let name = authManager.userName, !name.isEmpty {
-                                        Text(String(name.prefix(1)))
-                                            .font(.title)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(.white)
-                                    } else {
-                                        Image(systemName: "person.fill")
-                                            .font(.title)
-                                            .foregroundStyle(.white)
-                                    }
-                                }
+                            AvatarEditButton(authManager: authManager, size: 60)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 if let name = authManager.userName, !name.isEmpty {
@@ -75,7 +54,7 @@ struct SettingsView: View {
                             }) {
                                 Image(systemName: "pencil.circle.fill")
                                     .font(.title3)
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(Color.vocabBrand)
                             }
                         }
                         .padding(.vertical, 8)
@@ -105,7 +84,20 @@ struct SettingsView: View {
                         }
                     } else {
                         // 未登录状态
-                        VStack(spacing: 8) {
+                        VStack(spacing: 12) {
+                            HStack(spacing: 16) {
+                                AvatarEditButton(authManager: authManager, size: 60)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(LocalizedKey.changeAvatar.rawValue.localized)
+                                        .font(.headline)
+                                    Text(LocalizedKey.chooseFromPhotos.rawValue.localized)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
+                            
                             SignInWithAppleButton(
                                 onRequest: { request in
                                     request.requestedScopes = [.fullName, .email]
@@ -236,7 +228,7 @@ struct SettingsView: View {
                         
                         Link(LocalizedKey.developerWebsite.rawValue.localized, destination: URL(string: "https://mooyu.cc/download.html")!)
                             .font(.caption)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Color.vocabBrand)
                     }
                     .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)
@@ -245,6 +237,7 @@ struct SettingsView: View {
             }
             .navigationTitle(LocalizedKey.settings.rawValue.localized)
             .navigationBarTitleDisplayMode(.inline)
+            .vocabFormCanvas()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(LocalizedKey.done.rawValue.localized) {
@@ -397,10 +390,9 @@ struct EditUserNameView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .scrollDismissesKeyboard(.interactively)
-            .dismissKeyboardOnTap()
             .navigationTitle(LocalizedKey.editUserName.rawValue.localized)
             .navigationBarTitleDisplayMode(.inline)
+            .vocabFormCanvas()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(LocalizedKey.cancel.rawValue.localized) {

@@ -45,8 +45,18 @@ enum WordSheetAppearance {
 }
 
 enum VocabHaptics {
+    private static let selectionGenerator = UISelectionFeedbackGenerator()
+    
     static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
         UIImpactFeedbackGenerator(style: style).impactOccurred()
+    }
+    
+    static func selection() {
+        selectionGenerator.selectionChanged()
+    }
+    
+    static func prepareSelection() {
+        selectionGenerator.prepare()
     }
     
     static func notify(_ type: UINotificationFeedbackGenerator.FeedbackType) {
@@ -61,8 +71,6 @@ enum WordSheetDuplicatePolicy {
 
 enum WordListFilter: String, CaseIterable, Identifiable {
     case grouped
-    case unlearned
-    case dueReview
     case byMonth
     
     var id: String { rawValue }
@@ -70,8 +78,6 @@ enum WordListFilter: String, CaseIterable, Identifiable {
     var titleKey: LocalizedKey {
         switch self {
         case .grouped: return .libraryFilterGrouped
-        case .unlearned: return .libraryFilterUnlearned
-        case .dueReview: return .libraryFilterDue
         case .byMonth: return .libraryFilterByMonth
         }
     }
@@ -79,14 +85,16 @@ enum WordListFilter: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .grouped: return "square.stack.3d.up"
-        case .unlearned: return "circle"
-        case .dueReview: return "clock.arrow.circlepath"
         case .byMonth: return "calendar"
         }
     }
 }
 
 enum WordSheetService {
+    private static let countsVersionKey = "wordSheetCountsCacheVersion"
+    private static let countsDirtyKey = "wordSheetCountsNeedRebuild"
+    private static let currentCountsVersion = 1
+    
     private static let isoFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -109,6 +117,78 @@ enum WordSheetService {
         formatter.dateFormat = "MMMM d, yyyy"
         return formatter
     }()
+    
+    // MARK: - Denormalized counts
+    
+    static func markCountsDirty() {
+        UserDefaults.standard.set(true, forKey: countsDirtyKey)
+    }
+    
+    /// 首次升级或脏标记时，单次扫描全量单词回填冗余计数；平时跳过。
+    static func ensureCountsUpToDate(in context: ModelContext) {
+        let version = UserDefaults.standard.integer(forKey: countsVersionKey)
+        let dirty = UserDefaults.standard.bool(forKey: countsDirtyKey)
+        guard version < currentCountsVersion || dirty else { return }
+        rebuildAllCounts(in: context)
+    }
+    
+    /// 一次 fetch 全部 Word，按 sheet 聚合写入 wordCount / learnedCount。
+    static func rebuildAllCounts(in context: ModelContext) {
+        let sheets = (try? context.fetch(FetchDescriptor<WordSheet>())) ?? []
+        var totals: [UUID: Int] = [:]
+        var learned: [UUID: Int] = [:]
+        totals.reserveCapacity(sheets.count)
+        learned.reserveCapacity(sheets.count)
+        for sheet in sheets {
+            totals[sheet.id] = 0
+            learned[sheet.id] = 0
+        }
+        
+        let words = (try? context.fetch(FetchDescriptor<Word>())) ?? []
+        for word in words {
+            guard let sheetId = word.sheet?.id else { continue }
+            totals[sheetId, default: 0] += 1
+            if word.learned {
+                learned[sheetId, default: 0] += 1
+            }
+        }
+        
+        for sheet in sheets {
+            sheet.wordCount = totals[sheet.id] ?? 0
+            sheet.learnedCount = learned[sheet.id] ?? 0
+        }
+        try? context.save()
+        UserDefaults.standard.set(currentCountsVersion, forKey: countsVersionKey)
+        UserDefaults.standard.set(false, forKey: countsDirtyKey)
+    }
+    
+    static func noteInserted(_ word: Word) {
+        guard let sheet = word.sheet else { return }
+        sheet.wordCount += 1
+        if word.learned {
+            sheet.learnedCount += 1
+        }
+    }
+    
+    /// 须在 `context.delete(word)` 之前调用。
+    static func noteWillDelete(_ word: Word) {
+        guard let sheet = word.sheet else { return }
+        sheet.wordCount = max(0, sheet.wordCount - 1)
+        if word.learned {
+            sheet.learnedCount = max(0, sheet.learnedCount - 1)
+        }
+    }
+    
+    static func setLearned(_ word: Word, _ learned: Bool) {
+        guard word.learned != learned else { return }
+        word.learned = learned
+        guard let sheet = word.sheet else { return }
+        if learned {
+            sheet.learnedCount += 1
+        } else {
+            sheet.learnedCount = max(0, sheet.learnedCount - 1)
+        }
+    }
     
     static func isoDateString(from date: Date) -> String {
         isoFormatter.string(from: date)
@@ -244,7 +324,7 @@ enum WordSheetService {
         if policy == .keepBetterProgress {
             resolveDuplicates(in: target, context: context)
         }
-        try? context.save()
+        rebuildAllCounts(in: context)
     }
     
     static func merge(
@@ -287,7 +367,7 @@ enum WordSheetService {
                 word.sheet = target
             }
         }
-        try? context.save()
+        rebuildAllCounts(in: context)
     }
     
     static func resolveDuplicates(in target: WordSheet, context: ModelContext) {

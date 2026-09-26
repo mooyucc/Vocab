@@ -41,14 +41,18 @@
 "no_words_yet" = "还没有单词";
 "go_add_words" = "先到词库添加几个单词，就可以开始背词和复习。";
 "go_to_library_add" = "去词库添加";
-"daily_motivation" = "今天也要元气满满背单词 💪";
 "words_to_review" = "个单词待复习";
 "due_today_mastered_format" = "今日 %d 词到期 · 已掌握 %d / %d";
 "ai_smart_fill" = "AI 智能辅助录入";
 "check_in" = "打卡";
 "consecutive_days" = "天";
+"this_week" = "本周";
 "mastered_count_format" = "已掌握 %d / %d";
 "study_from_sheet_format" = "从「%@」开始";
+"current_word_sheet" = "当前词库";
+"stat_total" = "总词";
+"review_activity" = "复习活跃（按末次复习所在月统计）";
+"review_activity_months_format" = "%d 个月";
 
 // MARK: - Settings
 "account" = "账户";
@@ -122,6 +126,8 @@
 "review_all_description" = "复习全部词库所有单词";
 "continue_last" = "接着上次复习";
 "continue_last_description" = "复习忘记的和新增的单词";
+"hub_guess_description" = "根据提示猜词，练习主动回忆。";
+"hub_start" = "开始";
 "forgot" = "忘记了";
 "remembered" = "记住了";
 "daily_goal" = "每日目标";
@@ -149,6 +155,8 @@
 "combo_multiplier" = "×%d";
 "session_progress" = "%d / %d";
 "great_job" = "太棒了！";
+"go_to_exercise" = "去做习题";
+"go_to_guess" = "去猜词";
 "synonyms" = "近义词";
 "antonyms" = "反义词";
 
@@ -253,6 +261,8 @@
 "sheet_appearance" = "外观";
 "sheet_icon" = "图标";
 "sheet_color" = "颜色";
+"reset_sheet_color" = "恢复默认配色";
+"reset_sheet_color_hint" = "默认在词库列表中按粉、奶油、金黄轮换显示。";
 "pin_sheet" = "置顶";
 "unpin_sheet" = "取消置顶";
 "pinned_sheets" = "置顶";
@@ -305,6 +315,9 @@
 "user_name" = "用户名";
 "user_name_description" = "修改后的用户名将显示在应用中";
 "edit_user_name" = "编辑用户名";
+"change_avatar" = "更换头像";
+"choose_from_photos" = "从相册选择";
+"remove_avatar" = "移除头像";
 
 // MARK: - Features
 "word_management" = "单词管理";
@@ -314,7 +327,7 @@
 "camera_recognition_feature" = "拍照识别";
 "camera_recognition_description" = "使用相机拍照识别单词，快速添加新词汇到您的学习列表。";
 "learning_progress" = "学习进度";
-"learning_progress_description" = "在背单词页查看今日到期与已掌握进度。";
+"learning_progress_description" = "在进度页查看打卡、掌握度与今日到期情况。";
 "review_system" = "复习系统";
 "review_system_description" = "智能复习算法，帮助您巩固记忆，提高学习效率。";
 "first_release" = "首次发布";

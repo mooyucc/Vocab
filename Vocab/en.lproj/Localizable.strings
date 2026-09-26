@@ -41,14 +41,18 @@
 "no_words_yet" = "No Words Yet";
 "go_add_words" = "Add a few words in your library to start reviewing.";
 "go_to_library_add" = "Add in Library";
-"daily_motivation" = "Stay motivated and learn vocabulary today 💪";
 "words_to_review" = " words to review";
 "due_today_mastered_format" = "Due today: %d · Mastered %d / %d";
 "ai_smart_fill" = "AI Smart Fill";
 "check_in" = "Streak";
 "consecutive_days" = "days";
+"this_week" = "This week";
 "mastered_count_format" = "Mastered %d / %d";
 "study_from_sheet_format" = "From “%@”";
+"current_word_sheet" = "Current Sheet";
+"stat_total" = "Total";
+"review_activity" = "Review activity (by month of last review)";
+"review_activity_months_format" = "%d mo";
 
 // MARK: - Settings
 "account" = "Account";
@@ -122,6 +126,8 @@
 "review_all_description" = "Review all words in your word banks";
 "continue_last" = "Continue Last";
 "continue_last_description" = "Review forgotten and newly added words";
+"hub_guess_description" = "Guess the word from clues and practice recall.";
+"hub_start" = "Start";
 "forgot" = "Forgot";
 "remembered" = "Got";
 "daily_goal" = "Daily Goal";
@@ -149,6 +155,8 @@
 "combo_multiplier" = "×%d";
 "session_progress" = "%d / %d";
 "great_job" = "Great job!";
+"go_to_exercise" = "Do exercises";
+"go_to_guess" = "Play Guess";
 "synonyms" = "Synonyms";
 "antonyms" = "Antonyms";
 
@@ -253,6 +261,8 @@
 "sheet_appearance" = "Appearance";
 "sheet_icon" = "Icon";
 "sheet_color" = "Color";
+"reset_sheet_color" = "Use Default Colors";
+"reset_sheet_color_hint" = "Default cycles pink, cream, and gold in the library list.";
 "pin_sheet" = "Pin";
 "unpin_sheet" = "Unpin";
 "pinned_sheets" = "Pinned";
@@ -305,6 +315,9 @@
 "user_name" = "User Name";
 "user_name_description" = "The modified user name will be displayed in the app";
 "edit_user_name" = "Edit User Name";
+"change_avatar" = "Change Avatar";
+"choose_from_photos" = "Choose from Photos";
+"remove_avatar" = "Remove Avatar";
 
 // MARK: - Features
 "word_management" = "Word Management";
@@ -314,7 +327,7 @@
 "camera_recognition_feature" = "Camera Recognition";
 "camera_recognition_description" = "Use the camera to recognize words and quickly add new vocabulary to your learning list.";
 "learning_progress" = "Learning Progress";
-"learning_progress_description" = "See today's due words and mastery progress on the Learn tab.";
+"learning_progress_description" = "See check-ins, mastery, and today’s due words on the Progress tab.";
 "review_system" = "Review System";
 "review_system_description" = "Intelligent review algorithm helps you consolidate memory and improve learning efficiency.";
 "first_release" = "First Release";

@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct GuessWordGameView: View {
+    @Environment(\.dismiss) private var dismiss
     @Binding var isSessionActive: Bool
     @Binding var endSessionRequested: Bool
     @Binding var selectedTab: AppView
@@ -47,7 +48,7 @@ struct GuessWordGameView: View {
     init(
         isSessionActive: Binding<Bool> = .constant(false),
         endSessionRequested: Binding<Bool> = .constant(false),
-        selectedTab: Binding<AppView> = .constant(.guess)
+        selectedTab: Binding<AppView> = .constant(.study)
     ) {
         _isSessionActive = isSessionActive
         _endSessionRequested = endSessionRequested
@@ -122,11 +123,20 @@ struct GuessWordGameView: View {
                         }
                         .accessibilityLabel(LocalizedKey.exerciseEnd.rawValue.localized)
                     }
+                } else {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                        }
+                        .accessibilityLabel(LocalizedKey.cancel.rawValue.localized)
+                    }
                 }
             }
             .toolbar(phase == .answering && sessionScreen == .playing ? .hidden : .automatic, for: .tabBar)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.vocabCanvas)
         .alert(
             LocalizedKey.guessLeaveTitle.rawValue.localized,
             isPresented: $showEndConfirm
@@ -172,6 +182,7 @@ struct GuessWordGameView: View {
                 systemImage: "puzzlepiece.extension"
             ) {
                 selectedTab = .list
+                dismiss()
             }
         } else {
             ContentUnavailableView {
@@ -206,9 +217,9 @@ struct GuessWordGameView: View {
                 VStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(LinearGradient.vocabBrandProgress)
+                            .fill(LinearGradient.vocabGoldProgress)
                             .frame(width: 128, height: 128)
-                            .shadow(color: Color.vocabBrand.opacity(0.35), radius: 16, x: 0, y: 8)
+                            .shadow(color: Color.vocabGold.opacity(0.4), radius: 16, x: 0, y: 8)
                         VStack(spacing: 6) {
                             Image(systemName: "puzzlepiece.extension")
                                 .font(.system(size: 34, weight: .semibold))
@@ -218,7 +229,7 @@ struct GuessWordGameView: View {
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.8)
                         }
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.vocabInk)
                         .padding(.horizontal, 12)
                     }
                     Text("\(eligibleCount)\(LocalizedKey.wordsToReview.rawValue.localized)")
@@ -226,7 +237,7 @@ struct GuessWordGameView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(VocabPressButtonStyle())
             .accessibilityLabel("\(LocalizedKey.guessStart.rawValue.localized)，\(eligibleCount)\(LocalizedKey.wordsToReview.rawValue.localized)")
             
             if lastRecord != nil || !history.isEmpty {
@@ -280,10 +291,10 @@ struct GuessWordGameView: View {
                     }
                     .frame(maxHeight: 180)
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.vocabSurface)
+        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.card, style: .continuous))
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(LocalizedKey.guessRecentScores.rawValue.localized)
             }
@@ -305,8 +316,8 @@ struct GuessWordGameView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 100, alignment: .topLeading)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.vocabGold.opacity(0.16))
+        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.card, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title)，\(String(format: LocalizedKey.guessCompletedScore.rawValue.localized, score, maxScore))")
     }
@@ -389,10 +400,10 @@ struct GuessWordGameView: View {
             if showCombo && combo > 1 {
                 Text(String(format: LocalizedKey.comboStreak.rawValue.localized, combo))
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.vocabBrand)
+                    .foregroundStyle(Color.vocabGold)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color.vocabBrand.opacity(0.12))
+                    .background(Color.vocabGold.opacity(0.16))
                     .clipShape(Capsule())
                     .transition(.opacity.combined(with: .scale(scale: 0.92)))
             }
@@ -400,7 +411,7 @@ struct GuessWordGameView: View {
             Text("\(potentialScore)")
                 .font(.title2.weight(.bold))
                 .monospacedDigit()
-                .foregroundStyle(Color.vocabBrand)
+                .foregroundStyle(Color.vocabGold)
                 .contentTransition(.numericText())
                 .accessibilityLabel(
                     String(format: LocalizedKey.guessPotentialScoreA11y.rawValue.localized, potentialScore)
@@ -447,7 +458,7 @@ struct GuessWordGameView: View {
             }
             return usesMono ? .system(.title, design: .monospaced).weight(.semibold) : .title.weight(.semibold)
         }()
-        let color: Color = resolvedIsCorrect ? .green : .primary
+        let color: Color = resolvedIsCorrect ? Color.vocabTeal : .primary
         
         let glyphColor: Color = {
             if !unit.isRevealable { return .secondary }
@@ -511,7 +522,7 @@ struct GuessWordGameView: View {
                     .onSubmit(submitAnswer)
                     .padding(.horizontal, 12)
                     .frame(minHeight: 44)
-                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.vocabSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 
                 Button(action: submitAnswer) {
                     Text(LocalizedKey.guessSubmit)
@@ -543,7 +554,7 @@ struct GuessWordGameView: View {
                 HStack(spacing: 10) {
                     Text(resolvedTitle)
                         .font(.headline)
-                        .foregroundStyle(resolvedIsCorrect ? Color.green : Color.primary)
+                        .foregroundStyle(resolvedIsCorrect ? Color.vocabTeal : Color.primary)
                     
                     GuessSpeakButton(term: word.term) {
                         playPulse += 1

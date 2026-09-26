@@ -29,7 +29,7 @@ struct VocabApp: App {
                         .modelContainer(container)
                 } else {
                     ZStack {
-                        Color(.systemGroupedBackground)
+                        Color.vocabCanvas
                             .ignoresSafeArea()
                         ProgressView()
                     }

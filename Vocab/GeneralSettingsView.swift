@@ -92,6 +92,7 @@ struct GeneralSettingsView: View {
         }
         .navigationTitle(LocalizedKey.general.rawValue.localized)
         .navigationBarTitleDisplayMode(.inline)
+        .vocabFormCanvas()
         .preferredColorScheme(effectiveColorScheme)
         .sheet(isPresented: $showSupplementSheet) {
             WordSupplementView()

@@ -34,6 +34,8 @@ struct FlashCardView: View {
     
     private let swipeMinimumDistance: CGFloat = 16
     private let swipeLockDistance: CGFloat = 10
+    private let deckPeek: CGFloat = 14
+    private let deckScaleStep: CGFloat = 0.045
     
     private var swipeEnabled: Bool {
         showActionButtons && !voiceOverEnabled
@@ -57,7 +59,7 @@ struct FlashCardView: View {
                 let cardHeight = geometry.size.height
                 ZStack {
                     ForEach(deckDepths, id: \.self) { depth in
-                        deckLayer(depth: depth)
+                        deckLayer(depth: depth, cardHeight: cardHeight)
                     }
                     
                     ZStack {
@@ -94,7 +96,7 @@ struct FlashCardView: View {
                     .offset(y: dragOffset)
                     .rotationEffect(.degrees(Double(dragOffset) / 28), anchor: .center)
                     .zIndex(10)
-                    .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous))
                     .onTapGesture {
                         guard !isCommitting, abs(dragOffset) < swipeLockDistance else { return }
                         flipCard()
@@ -113,7 +115,6 @@ struct FlashCardView: View {
                 }
             }
             .padding(.top, deckTopInset)
-            .padding(.trailing, deckLayerCount > 0 ? 10 : 0)
             .padding(.bottom, swipeEnabled ? 12 : 0)
             .applySensoryFeedback(trigger: thresholdHapticTrigger, style: .solid)
             
@@ -191,30 +192,28 @@ struct FlashCardView: View {
         return Array((1...deckLayerCount).reversed())
     }
     
-    /// 叠层向上 offset / scale 不占布局，需预留顶部空间避免盖住进度条
+    /// 叠层向上 offset 不占布局，需预留顶部空间避免盖住进度条
     private var deckTopInset: CGFloat {
         guard deckLayerCount > 0 else { return 0 }
         let depth = CGFloat(deckLayerCount)
-        return 8 * depth + 24
+        return deckPeek * depth + 8
     }
     
     private var deckFill: Color {
-        colorScheme == .dark
-            ? Color(.secondarySystemGroupedBackground)
-            : Color.white
+        Color.vocabSurface
     }
     
-    private func deckLayer(depth: Int) -> some View {
+    private func deckLayer(depth: Int, cardHeight: CGFloat) -> some View {
         let effectiveDepth = CGFloat(depth) - stackLift
-        return RoundedRectangle(cornerRadius: 20, style: .continuous)
+        return RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
             .fill(deckFill)
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
                     .stroke(Color.primary.opacity(colorScheme == .dark ? 0.16 : 0.08), lineWidth: 1)
             )
             .shadow(color: .black.opacity(colorScheme == .dark ? 0.2 : 0.06), radius: 8, x: 0, y: 4)
-            .scaleEffect(1 + 0.028 * effectiveDepth)
-            .offset(x: 5 * effectiveDepth, y: -8 * effectiveDepth)
+            .scaleEffect(1 - deckScaleStep * effectiveDepth, anchor: .bottom)
+            .offset(y: -(cardHeight * deckScaleStep + deckPeek) * effectiveDepth)
             .opacity(0.72 - 0.18 * Double(depth - 1))
             .zIndex(Double(deckLayerCount - depth))
             .allowsHitTesting(false)
@@ -222,13 +221,13 @@ struct FlashCardView: View {
     }
     
     private var swipeDecisionOverlay: some View {
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
+        RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
             .fill(swipeTint.opacity(0.16 * swipeProgress))
     }
     
     private var swipeTint: Color {
-        if dragOffset < 0 { return .green }
-        if dragOffset > 0 { return .red }
+        if dragOffset < 0 { return .vocabTeal }
+        if dragOffset > 0 { return .vocabBrand }
         return .clear
     }
     
@@ -245,7 +244,7 @@ struct FlashCardView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            .tint(.red)
+            .tint(Color.vocabBrand)
             .controlSize(.large)
             .applySensoryFeedback(trigger: forgotTrigger, style: .soft)
             .accessibilityLabel(LocalizedKey.forgot.rawValue.localized)
@@ -261,7 +260,7 @@ struct FlashCardView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Color.vocabBrand)
+            .tint(Color.vocabTeal)
             .controlSize(.large)
             .applySensoryFeedback(trigger: rememberedTrigger, style: .solid)
             .accessibilityLabel(LocalizedKey.remembered.rawValue.localized)
@@ -440,9 +439,9 @@ struct CardFront: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(32)
         .background(cardFill)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
                 .stroke(Color.primary.opacity(colorScheme == .dark ? 0.22 : 0.10), lineWidth: 1)
         )
         .shadow(
@@ -456,9 +455,7 @@ struct CardFront: View {
     }
     
     private var cardFill: Color {
-        colorScheme == .dark
-            ? Color(.secondarySystemGroupedBackground)
-            : Color.white
+        Color.vocabSurface
     }
 }
 
@@ -603,9 +600,9 @@ struct CardBack: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(32)
         .background(LinearGradient.vocabBrandProgress)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
                 .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)

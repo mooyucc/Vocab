@@ -89,6 +89,7 @@ struct DataSettingsView: View {
         }
         .navigationTitle(LocalizedKey.vocabularyData.rawValue.localized)
         .navigationBarTitleDisplayMode(.inline)
+        .vocabFormCanvas()
         .alert(LocalizedKey.exportSuccess.rawValue.localized, isPresented: $showExportSuccess) {
             Button(LocalizedKey.ok.rawValue.localized, role: .cancel) { }
         } message: {
@@ -393,6 +394,7 @@ struct DataSettingsView: View {
                         
                         // 保存上下文
                         try modelContext.save()
+                        WordSheetService.rebuildAllCounts(in: modelContext)
                         
                         isImporting = false
                         showImportSuccess = true
@@ -505,7 +507,7 @@ struct DataSettingsView: View {
         
         do {
             if mergedGroupCount > 0 {
-                try modelContext.save()
+                WordSheetService.rebuildAllCounts(in: modelContext)
                 mergeResultMessage = "已合并 \(mergedGroupCount) 个重复日期词库，移动 \(movedWordCount) 个单词。"
             } else {
                 mergeResultMessage = "未发现需要合并的重复日期词库。"

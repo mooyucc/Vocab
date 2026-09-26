@@ -17,6 +17,9 @@ final class WordSheet: Identifiable {
     var isPinned: Bool = false
     var symbolName: String = "book.closed"
     var colorName: String = "accent"
+    /// 冗余计数：列表展示用，由 WordSheetService 维护，避免进词库时 N 次 fetchCount
+    var wordCount: Int = 0
+    var learnedCount: Int = 0
     
     @Relationship(deleteRule: .cascade, inverse: \Word.sheet)
     var words: [Word]?
@@ -28,7 +31,9 @@ final class WordSheet: Identifiable {
         sortOrder: Int = 0,
         isPinned: Bool = false,
         symbolName: String = "book.closed",
-        colorName: String = "accent"
+        colorName: String = "accent",
+        wordCount: Int = 0,
+        learnedCount: Int = 0
     ) {
         self.id = id
         self.name = name
@@ -37,6 +42,8 @@ final class WordSheet: Identifiable {
         self.isPinned = isPinned
         self.symbolName = symbolName
         self.colorName = colorName
+        self.wordCount = wordCount
+        self.learnedCount = learnedCount
     }
 }
 

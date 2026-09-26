@@ -11,8 +11,7 @@ import UIKit
 
 enum AppView {
     case study
-    case exercise
-    case guess
+    case progress
     case list
 }
 
@@ -34,7 +33,7 @@ struct EmptyLibraryPrompt: View {
                 Label(buttonTitleKey.rawValue.localized, systemImage: "plus")
             }
             .buttonStyle(.borderedProminent)
-            .tint(Color.vocabBrand)
+            .tint(Color.vocabBrandDeep)
             .controlSize(.large)
             .accessibilityLabel(buttonTitleKey.rawValue.localized)
         }
@@ -44,27 +43,10 @@ struct EmptyLibraryPrompt: View {
 
 struct ContentView: View {
     @State private var selectedTab: AppView = .study
-    @State private var isExerciseInProgress = false
-    @State private var isGuessSessionActive = false
-    @State private var endGuessSessionRequested = false
-    @State private var showLeaveGuessConfirm = false
     @State private var showFreeTrialWelcome = false
     @State private var showOnboarding = OnboardingStorage.shouldShow
     @ObservedObject private var localizedString = LocalizedString.shared
     
-    private var tabSelection: Binding<AppView> {
-        Binding(
-            get: { selectedTab },
-            set: { newValue in
-                if selectedTab == .guess && newValue != .guess && isGuessSessionActive {
-                    showLeaveGuessConfirm = true
-                } else {
-                    selectedTab = newValue
-                }
-            }
-        )
-    }
-
     var body: some View {
         if showOnboarding {
             OnboardingView {
@@ -76,28 +58,18 @@ struct ContentView: View {
     }
     
     private var mainTabs: some View {
-        TabView(selection: tabSelection) {
+        TabView(selection: $selectedTab) {
             StudyView(selectedTab: $selectedTab)
                 .tabItem {
                     Label(LocalizedKey.tabStudy.rawValue.localized, systemImage: "brain.head.profile")
                 }
                 .tag(AppView.study)
             
-            ExerciseView(isExerciseInProgress: $isExerciseInProgress, selectedTab: $selectedTab)
+            ProgressTabView(selectedTab: $selectedTab)
                 .tabItem {
-                    Label(LocalizedKey.tabExercise.rawValue.localized, systemImage: "text.badge.checkmark")
+                    Label(LocalizedKey.tabProgress.rawValue.localized, systemImage: "chart.bar.fill")
                 }
-                .tag(AppView.exercise)
-            
-            GuessWordGameView(
-                isSessionActive: $isGuessSessionActive,
-                endSessionRequested: $endGuessSessionRequested,
-                selectedTab: $selectedTab
-            )
-                .tabItem {
-                    Label(LocalizedKey.tabGuess.rawValue.localized, systemImage: "puzzlepiece.extension")
-                }
-                .tag(AppView.guess)
+                .tag(AppView.progress)
             
             WordListView()
                 .tabItem {
@@ -105,10 +77,10 @@ struct ContentView: View {
                 }
                 .tag(AppView.list)
         }
-        .frame(maxWidth: 600)
-        .frame(maxWidth: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.vocabCanvas)
         .applyTabViewStyle()
+        .tint(Color.vocabBrand)
         .onAppear {
             _ = UsageTracker.shared
             if UsageTracker.shouldShowFreeTrialWelcome {
@@ -119,17 +91,6 @@ struct ContentView: View {
             FreeTrialWelcomeView(onDismiss: {
                 showFreeTrialWelcome = false
             })
-        }
-        .alert(
-            LocalizedKey.guessLeaveTitle.rawValue.localized,
-            isPresented: $showLeaveGuessConfirm
-        ) {
-            Button(LocalizedKey.guessLeaveConfirm.rawValue.localized) {
-                endGuessSessionRequested = true
-            }
-            Button(LocalizedKey.cancel.rawValue.localized, role: .cancel) {}
-        } message: {
-            Text(LocalizedKey.guessLeaveMessage)
         }
     }
 }

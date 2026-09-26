@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct ExerciseView: View {
+    @Environment(\.dismiss) private var dismiss
     @Binding var isExerciseInProgress: Bool
     @Binding var selectedTab: AppView
     @Query private var words: [Word]
@@ -33,7 +34,7 @@ struct ExerciseView: View {
     
     init(
         isExerciseInProgress: Binding<Bool>,
-        selectedTab: Binding<AppView> = .constant(.exercise)
+        selectedTab: Binding<AppView> = .constant(.study)
     ) {
         _isExerciseInProgress = isExerciseInProgress
         _selectedTab = selectedTab
@@ -116,11 +117,20 @@ struct ExerciseView: View {
                             .accessibilityLabel(LocalizedKey.exerciseReshuffle.rawValue.localized)
                         }
                     }
+                } else {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                        }
+                        .accessibilityLabel(LocalizedKey.cancel.rawValue.localized)
+                    }
                 }
             }
         }
         .toolbar(isExerciseInProgress ? .hidden : .visible, for: .tabBar)
-        .background(Color(.systemGroupedBackground))
+        .background(Color.vocabCanvas)
         .confirmationDialog(
             String(format: LocalizedKey.exercisePickForm.rawValue.localized, pendingTerm),
             isPresented: $showFormPicker,
@@ -187,9 +197,9 @@ struct ExerciseView: View {
                 VStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(LinearGradient.vocabBrandProgress)
+                            .fill(LinearGradient.vocabTealProgress)
                             .frame(width: 128, height: 128)
-                            .shadow(color: Color.vocabBrand.opacity(0.35), radius: 16, x: 0, y: 8)
+                            .shadow(color: Color.vocabTeal.opacity(0.35), radius: 16, x: 0, y: 8)
                         VStack(spacing: 6) {
                             Image(systemName: "text.badge.checkmark")
                                 .font(.system(size: 34, weight: .semibold))
@@ -207,7 +217,7 @@ struct ExerciseView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(VocabPressButtonStyle())
             .accessibilityLabel("\(LocalizedKey.exerciseStart.rawValue.localized)，\(dueWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)")
             
             Spacer(minLength: 0)
@@ -226,6 +236,7 @@ struct ExerciseView: View {
                 systemImage: "text.badge.checkmark"
             ) {
                 selectedTab = .list
+                dismiss()
             }
         } else {
             ContentUnavailableView {
@@ -292,7 +303,7 @@ struct ExerciseView: View {
             if isChecked {
                 Text(scoreHeadline)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(score == items.count ? Color.green : Color.vocabBrand)
+                    .foregroundStyle(score == items.count ? Color.vocabTeal : Color.vocabBrand)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             
@@ -340,11 +351,11 @@ struct ExerciseView: View {
     @ViewBuilder
     private func chipBackground(used: Bool, selected: Bool) -> some View {
         if selected {
-            Color.vocabBrand
+            Color.vocabTeal
         } else if used {
             Color.secondary.opacity(0.12)
         } else {
-            Color(.systemBackground)
+            Color.vocabSurface
         }
     }
     
@@ -373,8 +384,8 @@ struct ExerciseView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.vocabSurface)
+        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.card, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(sentenceAccessibility(item: item, index: index, fill: fill))
         .accessibilityHint(LocalizedKey.exerciseFillHint.rawValue.localized)
@@ -387,10 +398,10 @@ struct ExerciseView: View {
         let after = parts.count > 1 ? parts.dropFirst().joined(separator: ClozeBuilder.blank) : ""
         let blankText = fill?.form ?? ClozeBuilder.blank
         let blankColor: Color = {
-            if correct { return .green }
-            if wrong { return .red }
-            if fill != nil { return Color.vocabBrand }
-            return Color.vocabBrand
+            if correct { return Color.vocabTeal }
+            if wrong { return Color.vocabBrand }
+            if fill != nil { return Color.vocabTeal }
+            return Color.vocabTeal
         }()
         
         return Button {
@@ -427,7 +438,7 @@ struct ExerciseView: View {
                 .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.borderedProminent)
-        .tint(Color.vocabBrand)
+        .tint(Color.vocabTeal)
         .controlSize(.regular)
         .disabled(!allFilled || isGenerating)
         .padding(.horizontal, 32)

@@ -76,6 +76,7 @@ struct DeleteAccountConfirmView: View {
         }
         .navigationTitle(LocalizedKey.deleteAccount.rawValue.localized)
         .navigationBarTitleDisplayMode(.inline)
+        .vocabFormCanvas()
         .alert(LocalizedKey.confirmDelete.rawValue.localized, isPresented: $showDeleteAlert) {
             Button(LocalizedKey.cancel.rawValue.localized, role: .cancel) { }
             Button(LocalizedKey.delete.rawValue.localized, role: .destructive) {
@@ -106,6 +107,7 @@ struct DeleteAccountConfirmView: View {
                 
                 // 清除账户信息
                 await MainActor.run {
+                    authManager.clearAvatar()
                     authManager.signOut()
                     isDeleting = false
                     dismiss()

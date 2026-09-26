@@ -39,14 +39,18 @@
 "no_words_yet" = "Aucun mot pour le moment";
 "go_add_words" = "Ajoutez quelques mots dans votre bibliothèque pour commencer à réviser.";
 "go_to_library_add" = "Ajouter dans la bibliothèque";
-"daily_motivation" = "Restez motivé et apprenez du vocabulaire aujourd'hui 💪";
 "words_to_review" = " mots à réviser";
 "due_today_mastered_format" = "À revoir : %d · Maîtrisés %d / %d";
 "ai_smart_fill" = "Remplissage intelligent par IA";
 "check_in" = "Série";
 "consecutive_days" = "jours";
+"this_week" = "Cette semaine";
 "mastered_count_format" = "Maîtrisés %d / %d";
 "study_from_sheet_format" = "Depuis « %@ »";
+"current_word_sheet" = "Groupe actuel";
+"stat_total" = "Total";
+"review_activity" = "Activité de révision (mois de dernière révision)";
+"review_activity_months_format" = "%d mois";
 
 // MARK: - Settings
 "account" = "Compte";
@@ -117,6 +121,8 @@
 "review_all_description" = "Réviser tous les mots de toutes les listes.";
 "continue_last" = "Continuer la dernière session";
 "continue_last_description" = "Réviser les mots oubliés et les mots nouvellement ajoutés.";
+"hub_guess_description" = "Devinez le mot à partir d’indices pour entraîner le rappel.";
+"hub_start" = "Commencer";
 "forgot" = "Oublié";
 "remembered" = "Retenu";
 "daily_goal" = "Objectif quotidien";
@@ -144,6 +150,8 @@
 "combo_multiplier" = "×%d";
 "session_progress" = "%d / %d";
 "great_job" = "Bravo !";
+"go_to_exercise" = "Faire les exercices";
+"go_to_guess" = "Jouer à Deviner";
 "synonyms" = "Synonymes";
 "antonyms" = "Antonymes";
 
@@ -247,6 +255,8 @@
 "sheet_appearance" = "Apparence";
 "sheet_icon" = "Icône";
 "sheet_color" = "Couleur";
+"reset_sheet_color" = "Couleurs par défaut";
+"reset_sheet_color_hint" = "Par défaut : rose, crème et or selon l’ordre de la liste.";
 "pin_sheet" = "Épingler";
 "unpin_sheet" = "Désépingler";
 "pinned_sheets" = "Épinglées";
@@ -299,6 +309,9 @@
 "user_name" = "Nom d’utilisateur";
 "user_name_description" = "Le nom d’utilisateur modifié sera affiché dans l’application.";
 "edit_user_name" = "Modifier le nom d’utilisateur";
+"change_avatar" = "Changer d’avatar";
+"choose_from_photos" = "Choisir dans Photos";
+"remove_avatar" = "Supprimer l’avatar";
 
 // MARK: - Features
 "word_management" = "Gestion de mots";
@@ -308,7 +321,7 @@
 "camera_recognition_feature" = "Reconnaissance par caméra";
 "camera_recognition_description" = "Utilisez la caméra pour reconnaître des mots et les ajouter rapidement à votre liste d’apprentissage.";
 "learning_progress" = "Progression d’apprentissage";
-"learning_progress_description" = "Consultez les mots du jour et votre progression dans l’onglet Apprendre.";
+"learning_progress_description" = "Consultez les check-ins, la maîtrise et les mots du jour dans l’onglet Progrès.";
 "review_system" = "Système de révision";
 "review_system_description" = "Un algorithme de révision intelligent pour consolider la mémoire et améliorer l’efficacité d’apprentissage.";
 "first_release" = "Première version";

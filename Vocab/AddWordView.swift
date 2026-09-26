@@ -450,6 +450,7 @@ struct AddWordView: View {
         )
         
         modelContext.insert(newWord)
+        WordSheetService.noteInserted(newWord)
         do {
             try modelContext.save()
             VocabHaptics.notify(.success)

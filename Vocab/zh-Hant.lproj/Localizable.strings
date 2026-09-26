@@ -39,14 +39,18 @@
 "no_words_yet" = "目前還沒有單字";
 "go_add_words" = "先到單字庫新增幾個單字，就可以開始背詞和複習。";
 "go_to_library_add" = "去單字庫新增";
-"daily_motivation" = "今天也要元氣滿滿背單字 💪";
 "words_to_review" = "個單字待複習";
 "due_today_mastered_format" = "今日 %d 詞到期 · 已掌握 %d / %d";
 "ai_smart_fill" = "AI 智能輔助輸入";
 "check_in" = "打卡";
 "consecutive_days" = "天";
+"this_week" = "本週";
 "mastered_count_format" = "已掌握 %d / %d";
 "study_from_sheet_format" = "從「%@」開始";
+"current_word_sheet" = "當前詞庫";
+"stat_total" = "總詞";
+"review_activity" = "複習活躍（依末次複習月份）";
+"review_activity_months_format" = "%d 個月";
 
 // MARK: - Settings
 "account" = "帳號";
@@ -118,6 +122,8 @@
 "review_all_description" = "複習全部詞庫所有單字。";
 "continue_last" = "接續上次複習";
 "continue_last_description" = "複習忘記的與新增的單字。";
+"hub_guess_description" = "根據提示猜詞，練習主動回憶。";
+"hub_start" = "開始";
 "forgot" = "忘記了";
 "remembered" = "記住了";
 "daily_goal" = "每日目標";
@@ -145,6 +151,8 @@
 "combo_multiplier" = "×%d";
 "session_progress" = "%d / %d";
 "great_job" = "太棒了！";
+"go_to_exercise" = "去做習題";
+"go_to_guess" = "去猜詞";
 "synonyms" = "近義詞";
 "antonyms" = "反義詞";
 
@@ -248,6 +256,8 @@
 "sheet_appearance" = "外觀";
 "sheet_icon" = "圖示";
 "sheet_color" = "顏色";
+"reset_sheet_color" = "恢復預設配色";
+"reset_sheet_color_hint" = "預設在詞庫列表中依粉、奶油、金黃輪換顯示。";
 "pin_sheet" = "置頂";
 "unpin_sheet" = "取消置頂";
 "pinned_sheets" = "置頂";
@@ -300,6 +310,9 @@
 "user_name" = "使用者名稱";
 "user_name_description" = "修改後的名稱將顯示在應用程式中。";
 "edit_user_name" = "編輯名稱";
+"change_avatar" = "更換頭像";
+"choose_from_photos" = "從相簿選擇";
+"remove_avatar" = "移除頭像";
 
 // MARK: - Features
 "word_management" = "單字管理";
@@ -309,7 +322,7 @@
 "camera_recognition_feature" = "拍照辨識";
 "camera_recognition_description" = "使用相機拍照辨識單字，快速將新單字加入學習清單。";
 "learning_progress" = "學習進度";
-"learning_progress_description" = "在背單字頁查看今日到期與已掌握進度。";
+"learning_progress_description" = "在進度頁查看打卡、掌握度與今日到期情況。";
 "review_system" = "複習系統";
 "review_system_description" = "智慧複習演算法，幫助您鞏固記憶、提升學習效率。";
 "first_release" = "首次發佈";

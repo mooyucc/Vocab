@@ -244,6 +244,7 @@ struct BatchAddWordsView: View {
                         )
                         
                         modelContext.insert(newWord)
+                        WordSheetService.noteInserted(newWord)
                     }
                 } catch {
                     // 检查是否是次数不足的错误
@@ -268,6 +269,7 @@ struct BatchAddWordsView: View {
                             )
                             
                             modelContext.insert(newWord)
+                            WordSheetService.noteInserted(newWord)
                         }
                     }
                 }

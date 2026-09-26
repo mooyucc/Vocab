@@ -36,7 +36,7 @@ struct AboutView: View {
                         .frame(width: 100, height: 100)
                         .background(
                             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .fill(Color(.systemBackground))
+                                .fill(Color.vocabSurface)
                                 .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -90,6 +90,7 @@ struct AboutView: View {
         }
         .navigationTitle(LocalizedKey.about.rawValue.localized)
         .navigationBarTitleDisplayMode(.inline)
+        .vocabFormCanvas()
     }
 }
 
@@ -136,6 +137,7 @@ struct FeatureIntroductionView: View {
         }
         .navigationTitle(LocalizedKey.features.rawValue.localized)
         .navigationBarTitleDisplayMode(.inline)
+        .vocabFormCanvas()
     }
 }
 
@@ -197,6 +199,7 @@ struct VersionUpdateView: View {
         }
         .navigationTitle(LocalizedKey.updates.rawValue.localized)
         .navigationBarTitleDisplayMode(.inline)
+        .vocabFormCanvas()
     }
 }
 

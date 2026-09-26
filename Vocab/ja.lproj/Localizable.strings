@@ -39,14 +39,18 @@
 "no_words_yet" = "まだ単語がありません";
 "go_add_words" = "単語帳にいくつか追加すると、学習と復習を始められます。";
 "go_to_library_add" = "単語帳に追加";
-"daily_motivation" = "今日も単語学習を続けましょう 💪";
 "words_to_review" = "語を復習";
 "due_today_mastered_format" = "今日の復習 %d 語 · 習得済み %d / %d";
 "ai_smart_fill" = "AI 自動入力";
 "check_in" = "連続";
 "consecutive_days" = "日";
+"this_week" = "今週";
 "mastered_count_format" = "習得済み %d / %d";
 "study_from_sheet_format" = "「%@」から";
+"current_word_sheet" = "学習中の単語帳";
+"stat_total" = "総語";
+"review_activity" = "復習アクティビティ（最終復習の月）";
+"review_activity_months_format" = "%dか月";
 
 // MARK: - Settings
 "account" = "アカウント";
@@ -117,6 +121,8 @@
 "review_all_description" = "すべての単語帳の単語を復習します。";
 "continue_last" = "前回の続きから";
 "continue_last_description" = "忘れた単語と新しく追加した単語を復習します。";
+"hub_guess_description" = "ヒントから単語を当てて、想起力を鍛えます。";
+"hub_start" = "開始";
 "forgot" = "忘れた";
 "remembered" = "覚えた";
 "daily_goal" = "毎日の目標";
@@ -144,6 +150,8 @@
 "combo_multiplier" = "×%d";
 "session_progress" = "%d / %d";
 "great_job" = "すばらしい！";
+"go_to_exercise" = "問題を解く";
+"go_to_guess" = "単語当てへ";
 "synonyms" = "類義語";
 "antonyms" = "対義語";
 
@@ -247,6 +255,8 @@
 "sheet_appearance" = "外観";
 "sheet_icon" = "アイコン";
 "sheet_color" = "カラー";
+"reset_sheet_color" = "デフォルトに戻す";
+"reset_sheet_color_hint" = "デフォルトはリスト順にピンク・クリーム・ゴールドで表示されます。";
 "pin_sheet" = "ピン留め";
 "unpin_sheet" = "ピン留めを外す";
 "pinned_sheets" = "ピン留め";
@@ -299,6 +309,9 @@
 "user_name" = "ユーザー名";
 "user_name_description" = "変更したユーザー名はアプリ内に表示されます。";
 "edit_user_name" = "ユーザー名を編集";
+"change_avatar" = "アバターを変更";
+"choose_from_photos" = "写真から選択";
+"remove_avatar" = "アバターを削除";
 
 // MARK: - Features
 "word_management" = "単語管理";
@@ -308,7 +321,7 @@
 "camera_recognition_feature" = "カメラ認識";
 "camera_recognition_description" = "カメラで単語を認識し、すばやく学習リストに追加します。";
 "learning_progress" = "学習進捗";
-"learning_progress_description" = "学習タブで本日の復習単語と習得進捗を確認できます。";
+"learning_progress_description" = "進捗タブでチェックイン、習得度、本日の復習を確認できます。";
 "review_system" = "復習システム";
 "review_system_description" = "スマートな復習アルゴリズムで記憶を定着させ、学習効率を高めます。";
 "first_release" = "初回リリース";

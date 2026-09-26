@@ -7,12 +7,6 @@
 
 import SwiftUI
 
-private let welcomeGradient = LinearGradient(
-    colors: [Color(hex: "FE6A57"), Color(hex: "FE2E69")],
-    startPoint: .topLeading,
-    endPoint: .bottomTrailing
-)
-
 struct FreeTrialWelcomeView: View {
     var onDismiss: () -> Void
     
@@ -22,7 +16,7 @@ struct FreeTrialWelcomeView: View {
             
             Image(systemName: "gift.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(welcomeGradient)
+                .foregroundStyle(LinearGradient.vocabBrandProgress)
             
             VStack(spacing: 12) {
                 Text("free_trial_welcome_title".localized)
@@ -47,7 +41,7 @@ struct FreeTrialWelcomeView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(welcomeGradient)
+                    .background(LinearGradient.vocabBrandProgress)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .padding(.horizontal, 24)
@@ -55,6 +49,7 @@ struct FreeTrialWelcomeView: View {
         }
         .padding(.top, 40)
         .background(Color(.systemGroupedBackground))
+        .tint(Color.vocabBrand)
     }
 }
 

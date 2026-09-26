@@ -39,14 +39,18 @@
 "no_words_yet" = "아직 단어가 없습니다";
 "go_add_words" = "단어장에 몇 개만 추가하면 학습과 복습을 시작할 수 있어요.";
 "go_to_library_add" = "단어장에 추가";
-"daily_motivation" = "오늘도 열심히 단어를 외워봐요 💪";
 "words_to_review" = "개 단어 복습 필요";
 "due_today_mastered_format" = "오늘 복습 %d개 · 완료 %d / %d";
 "ai_smart_fill" = "AI 스마트 입력";
 "check_in" = "출석";
 "consecutive_days" = "일";
+"this_week" = "이번 주";
 "mastered_count_format" = "완료 %d / %d";
 "study_from_sheet_format" = "「%@」에서 시작";
+"current_word_sheet" = "현재 단어장";
+"stat_total" = "전체";
+"review_activity" = "복습 활동(마지막 복습 월 기준)";
+"review_activity_months_format" = "%d개월";
 
 // MARK: - Settings
 "account" = "계정";
@@ -117,6 +121,8 @@
 "review_all_description" = "모든 단어장의 단어를 복습합니다.";
 "continue_last" = "지난 학습 이어서";
 "continue_last_description" = "잊어버린 단어와 새로 추가한 단어를 복습합니다.";
+"hub_guess_description" = "힌트로 단어를 맞춰 능동 회상을 연습합니다.";
+"hub_start" = "시작";
 "forgot" = "잊어버림";
 "remembered" = "기억함";
 "daily_goal" = "일일 목표";
@@ -144,6 +150,8 @@
 "combo_multiplier" = "×%d";
 "session_progress" = "%d / %d";
 "great_job" = "잘했어요!";
+"go_to_exercise" = "문제로 이동";
+"go_to_guess" = "맞히기로 이동";
 "synonyms" = "유의어";
 "antonyms" = "반의어";
 
@@ -247,6 +255,8 @@
 "sheet_appearance" = "모양";
 "sheet_icon" = "아이콘";
 "sheet_color" = "색상";
+"reset_sheet_color" = "기본 색상으로";
+"reset_sheet_color_hint" = "기본값은 목록 순서대로 핑크·크림·골드로 표시됩니다.";
 "pin_sheet" = "고정";
 "unpin_sheet" = "고정 해제";
 "pinned_sheets" = "고정됨";
@@ -299,6 +309,9 @@
 "user_name" = "사용자 이름";
 "user_name_description" = "변경된 사용자 이름은 앱에 표시됩니다.";
 "edit_user_name" = "이름 편집";
+"change_avatar" = "아바타 변경";
+"choose_from_photos" = "사진에서 선택";
+"remove_avatar" = "아바타 삭제";
 
 // MARK: - Features
 "word_management" = "단어 관리";
@@ -308,7 +321,7 @@
 "camera_recognition_feature" = "카메라 인식";
 "camera_recognition_description" = "카메라로 단어를 인식하여 학습 목록에 빠르게 추가합니다.";
 "learning_progress" = "학습 진행 상황";
-"learning_progress_description" = "학습 탭에서 오늘 복습할 단어와 암기 진행도를 확인할 수 있습니다.";
+"learning_progress_description" = "진행 탭에서 출석, 숙달도, 오늘 복습할 단어를 확인할 수 있습니다.";
 "review_system" = "복습 시스템";
 "review_system_description" = "지능형 복습 알고리즘으로 기억을 공고히 하고 학습 효율을 높입니다.";
 "first_release" = "첫 출시";

@@ -77,6 +77,7 @@ struct OnboardingView: View {
         .frame(maxWidth: 600)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .tint(Color.vocabBrand)
         .onAppear {
             suggestLearningLanguageIfNeeded()
         }
@@ -329,7 +330,7 @@ private struct OnboardingLanguageCard: View {
             .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? Color.vocabBrand.opacity(0.12) : Color(.secondarySystemBackground))
+                    .fill(isSelected ? Color.vocabBrand.opacity(0.12) : Color(.secondarySystemGroupedBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)

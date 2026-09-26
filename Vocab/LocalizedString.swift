@@ -154,14 +154,18 @@ enum LocalizedKey: String {
     case noWordsYet = "no_words_yet"
     case goAddWords = "go_add_words"
     case goToLibraryAdd = "go_to_library_add"
-    case dailyMotivation = "daily_motivation"
     case wordsToReview = "words_to_review"
     case dueTodayMasteredFormat = "due_today_mastered_format"
     case aiSmartFill = "ai_smart_fill"
     case checkIn = "check_in"
     case consecutiveDays = "consecutive_days"
+    case thisWeek = "this_week"
     case masteredCountFormat = "mastered_count_format"
     case studyFromSheetFormat = "study_from_sheet_format"
+    case currentWordSheet = "current_word_sheet"
+    case statTotal = "stat_total"
+    case reviewActivity = "review_activity"
+    case reviewActivityMonthsFormat = "review_activity_months_format"
     
     // MARK: - Settings
     case account = "account"
@@ -244,6 +248,8 @@ enum LocalizedKey: String {
     case reviewAllDescription = "review_all_description"
     case continueLast = "continue_last"
     case continueLastDescription = "continue_last_description"
+    case hubGuessDescription = "hub_guess_description"
+    case hubStart = "hub_start"
     case forgot = "forgot"
     case remembered = "remembered"
     case dailyGoal = "daily_goal"
@@ -273,6 +279,8 @@ enum LocalizedKey: String {
     case greatJob = "great_job"
     case synonyms = "synonyms"
     case antonyms = "antonyms"
+    case goToExercise = "go_to_exercise"
+    case goToGuess = "go_to_guess"
     
     // MARK: - Exercise
     case exerciseWordBank = "exercise_word_bank"
@@ -372,6 +380,8 @@ enum LocalizedKey: String {
     case sheetAppearance = "sheet_appearance"
     case sheetIcon = "sheet_icon"
     case sheetColor = "sheet_color"
+    case resetSheetColor = "reset_sheet_color"
+    case resetSheetColorHint = "reset_sheet_color_hint"
     case pinSheet = "pin_sheet"
     case unpinSheet = "unpin_sheet"
     case pinnedSheets = "pinned_sheets"
@@ -424,6 +434,9 @@ enum LocalizedKey: String {
     case userName = "user_name"
     case userNameDescription = "user_name_description"
     case editUserName = "edit_user_name"
+    case changeAvatar = "change_avatar"
+    case chooseFromPhotos = "choose_from_photos"
+    case removeAvatar = "remove_avatar"
     
     // MARK: - Features
     case wordManagement = "word_management"

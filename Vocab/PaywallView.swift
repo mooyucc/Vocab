@@ -9,7 +9,7 @@ import SwiftUI
 import StoreKit
 
 private let paywallGradient = LinearGradient(
-    colors: [Color(hex: "FE6A57"), Color(hex: "FE2E69")],
+    colors: [Color(hex: "E36C85"), Color(hex: "C94D68")],
     startPoint: .topLeading,
     endPoint: .bottomTrailing
 )
@@ -77,7 +77,7 @@ struct PaywallView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(paywallGradient)
-                            .shadow(color: Color(hex: "FE2E69").opacity(0.35), radius: 12, x: 0, y: 6)
+                            .shadow(color: Color(hex: "C94D68").opacity(0.35), radius: 12, x: 0, y: 6)
                     )
                     .padding(.horizontal, 20)
                     
@@ -151,7 +151,7 @@ struct PaywallView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
-                        .background(Color(.secondarySystemGroupedBackground))
+                        .background(Color.vocabSurface)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                     .padding(.horizontal, 20)
@@ -169,7 +169,7 @@ struct PaywallView: View {
                     Spacer(minLength: 24)
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.vocabCanvas)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -249,7 +249,7 @@ struct PurchaseCard: View {
                 }
             }
             .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(Color.vocabSurface)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)

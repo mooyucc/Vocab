@@ -18,11 +18,14 @@ class AuthenticationManager: NSObject, ObservableObject {
     @Published var userIdentifier: String?
     @Published var userEmail: String?
     @Published var userName: String?
+    @Published var avatarImage: UIImage?
     
     private let userDefaults = UserDefaults.standard
     private let userIdentifierKey = "userIdentifier"
     private let userEmailKey = "userEmail"
     private let userNameKey = "userName"
+    private let avatarFileName = "userAvatar.jpg"
+    private let avatarMaxPixel: CGFloat = 512
     
     override init() {
         super.init()
@@ -38,6 +41,49 @@ class AuthenticationManager: NSObject, ObservableObject {
         userEmail = userDefaults.string(forKey: userEmailKey)
         userName = userDefaults.string(forKey: userNameKey)
         isSignedIn = userIdentifier != nil
+        avatarImage = loadAvatarFromDisk()
+    }
+    
+    private var avatarFileURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(avatarFileName)
+    }
+    
+    private func loadAvatarFromDisk() -> UIImage? {
+        let url = avatarFileURL
+        guard FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let image = UIImage(data: data) else {
+            return nil
+        }
+        return image
+    }
+    
+    /// 保存用户头像（居中裁方并压缩后写入 Documents）
+    @discardableResult
+    func updateAvatar(_ image: UIImage) -> Bool {
+        let prepared = image.normalized().squaredAndResized(maxPixel: avatarMaxPixel)
+        guard let data = prepared.jpegData(compressionQuality: 0.86) else {
+            print("⚠️ 头像 JPEG 编码失败")
+            return false
+        }
+        do {
+            try data.write(to: avatarFileURL, options: .atomic)
+            avatarImage = prepared
+            print("✅ 头像已保存")
+            return true
+        } catch {
+            print("⚠️ 头像保存失败: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    func clearAvatar() {
+        let url = avatarFileURL
+        if FileManager.default.fileExists(atPath: url.path) {
+            try? FileManager.default.removeItem(at: url)
+        }
+        avatarImage = nil
     }
     
     // 检查 Apple ID 凭证状态（用于验证登录状态，但无法获取用户名）
@@ -130,6 +176,31 @@ class AuthenticationManager: NSObject, ObservableObject {
         userEmail = nil
         userName = nil
         isSignedIn = false
+        // 头像为设备本地偏好，退出登录时保留；删除账号时再 clearAvatar()
+    }
+}
+
+extension UIImage {
+    /// 居中裁成正方形并限制边长（调用前建议先 `normalized()`）
+    func squaredAndResized(maxPixel: CGFloat) -> UIImage {
+        let side = min(size.width, size.height)
+        guard side > 0 else { return self }
+        let outputSide = min(side, maxPixel)
+        let scaleX = outputSide / size.width
+        let scaleY = outputSide / size.height
+        let drawScale = max(scaleX, scaleY)
+        let drawSize = CGSize(width: size.width * drawScale, height: size.height * drawScale)
+        let origin = CGPoint(
+            x: (outputSide - drawSize.width) / 2,
+            y: (outputSide - drawSize.height) / 2
+        )
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: outputSide, height: outputSide), format: format)
+        return renderer.image { _ in
+            draw(in: CGRect(origin: origin, size: drawSize))
+        }
     }
 }
 
