@@ -33,21 +33,28 @@ class LocalizedString: ObservableObject {
     /// - Returns: 本地化后的字符串
     func localized(_ key: String) -> String {
         let languageCode = currentLanguage.rawValue
-        let bundle = Bundle.main
         
-        // 尝试从指定语言的 bundle 中获取
-        if let path = bundle.path(forResource: languageCode, ofType: "lproj"),
-           let languageBundle = Bundle(path: path) {
-            let localized = languageBundle.localizedString(forKey: key, value: nil, table: nil)
-            // 如果返回的字符串和 key 相同，说明没有找到本地化，尝试从主 bundle 获取
-            if localized != key {
-                return localized
-            }
+        // 优先从当前界面语言的 bundle 获取
+        if let value = string(for: key, in: languageCode), value != key {
+            return value
         }
         
-        // 如果找不到，尝试从主 bundle 获取
-        let mainLocalized = bundle.localizedString(forKey: key, value: nil, table: nil)
-        return mainLocalized != key ? mainLocalized : key
+        // 缺键时回退英文，避免落到系统语言（如简体）造成混排
+        if languageCode != AppLanguage.english.rawValue,
+           let value = string(for: key, in: AppLanguage.english.rawValue),
+           value != key {
+            return value
+        }
+        
+        return key
+    }
+    
+    private func string(for key: String, in languageCode: String) -> String? {
+        guard let path = Bundle.main.path(forResource: languageCode, ofType: "lproj"),
+              let languageBundle = Bundle(path: path) else {
+            return nil
+        }
+        return languageBundle.localizedString(forKey: key, value: nil, table: nil)
     }
 }
 
@@ -212,6 +219,8 @@ enum LocalizedKey: String {
     case wordSheetDescription = "word_sheet_description"
     case saveWord = "save_word"
     case addNewWordTitle = "add_new_word_title"
+    case editWordTitle = "edit_word_title"
+    case saveFailed = "save_failed"
     case aiFill = "ai_fill"
     case cameraRecognize = "camera_recognize"
     case aiGenerateFailed = "ai_generate_failed"
@@ -456,6 +465,18 @@ enum LocalizedKey: String {
     case progressTracking = "progress_tracking"
     case reviewSystemFeature = "review_system_feature"
     case versionDateFormat = "version_date_format"
+    case versionUpdate270Date = "version_update_2_70_date"
+    case versionUpdate270UI = "version_update_2_70_ui"
+    case versionUpdate270Dark = "version_update_2_70_dark"
+    case versionUpdate270Tabs = "version_update_2_70_tabs"
+    case versionUpdate270Icons = "version_update_2_70_icons"
+    case versionUpdate260Date = "version_update_2_60_date"
+    case versionUpdate260StudyHub = "version_update_2_60_study_hub"
+    case versionUpdate260ExerciseGuess = "version_update_2_60_exercise_guess"
+    case versionUpdate260Progress = "version_update_2_60_progress"
+    case versionUpdate260Sheets = "version_update_2_60_sheets"
+    case versionUpdate260OnboardingLang = "version_update_2_60_onboarding_lang"
+    case versionUpdate260AccountUI = "version_update_2_60_account_ui"
     case versionUpdate24Date = "version_update_2_4_date"
     case versionUpdate24RecommendedReview = "version_update_2_4_recommended_review"
     case versionUpdate24ProgressTab = "version_update_2_4_progress_tab"

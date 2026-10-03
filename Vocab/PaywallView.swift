@@ -16,6 +16,7 @@ private let paywallGradient = LinearGradient(
 
 struct PaywallView: View {
     @Environment(\.dismiss) var dismiss
+    @ObservedObject private var localizedString = LocalizedString.shared
     @StateObject private var purchaseManager = PurchaseManager.shared
     @StateObject private var usageTracker = UsageTracker.shared
     @State private var isPurchasing = false

@@ -14,7 +14,7 @@ enum ReviewMode {
     case recommendedReview  // 推荐复习（基于艾宾浩斯遗忘曲线）
 }
 
-/// 背单词 hub 第三段圆环上的五个入口
+/// 背单词 hub 横向手风琴入口
 private enum StudyHubAction: Int, CaseIterable, Identifiable {
     case recommended
     case reviewAll
@@ -53,12 +53,35 @@ private enum StudyHubAction: Int, CaseIterable, Identifiable {
         case .guess: return "puzzlepiece.extension"
         }
     }
+    
+    /// 收起窄条底色（与词库手风琴色板共用）
+    var stripColorName: String {
+        switch self {
+        case .recommended: return "hubGold"
+        case .reviewAll: return "hubBrand"
+        case .continueLast: return "hubSky"
+        case .exercise: return "hubIndigo"
+        case .guess: return "hubTeal"
+        }
+    }
+    
+    var stripColor: Color {
+        WordSheetAppearance.color(named: stripColorName)
+    }
+    
+    var inkOnStrip: Color {
+        switch self {
+        case .continueLast, .exercise: return Color(hex: "1A1A1A")
+        default: return Color(hex: "1A1A1A")
+        }
+    }
 }
 
 struct StudyView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject var authManager: AuthenticationManager
+    @ObservedObject private var localizedString = LocalizedString.shared
     @Binding var selectedTab: AppView
     @Query private var words: [Word]
     @Query(sort: \WordSheet.createdAt, order: .reverse) private var allSheets: [WordSheet]
@@ -66,7 +89,6 @@ struct StudyView: View {
     @State private var forgottenWordIds: Set<UUID> = []
     @State private var showReviewAlert = false
     @State private var selectedSheetIds: Set<UUID> = []
-    @State private var showSheetPicker = false
     @State private var reviewModeSelected: Bool = false
     @State private var reviewMode: ReviewMode?
     @State private var sessionQueue: [Word] = [] // 当前会话的复习队列
@@ -81,14 +103,15 @@ struct StudyView: View {
     @State private var isExerciseInProgress = false
     @State private var isGuessSessionActive = false
     @State private var endGuessSessionRequested = false
-    /// 第三段圆环当前选中项（正中 / 正上）
-    @State private var hubActionIndex: Int = 0
-    /// Click Wheel：相对吸附位的实时转角（度，顺时针为正）
-    @State private var ringDragDegrees: Double = 0
-    @State private var ringLastFingerAngle: Double? = nil
-    @State private var ringDidScrub: Bool = false
-    /// Click Wheel：上次已反馈的小刻度索引（与视觉 minorStep 对齐）
-    @State private var ringLastTickIndex: Int? = nil
+    /// 手风琴选中项；nil = 全等宽（首次点击前）
+    @State private var accordionSelection: StudyHubAction? = nil
+    @State private var accordionDetailVisible = false
+    /// 氛围光斑上一入口色，用于双色过渡
+    @State private var atmospherePreviousAccent: Color = .vocabBrandDeep
+    
+    private var atmosphereAccent: Color {
+        accordionSelection?.stripColor ?? .vocabBrand
+    }
     
     // 根据选中的 sheet 过滤单词
     private var filteredWords: [Word] {
@@ -194,27 +217,21 @@ struct StudyView: View {
     private enum HubLayout {
         static let horizontalInset: CGFloat = 16
         static let cardCorner: CGFloat = 44
-        static let centerDiameter: CGFloat = 84
-        static let sideDiameter: CGFloat = 58
-        static let farDiameter: CGFloat = 44
-        /// 相邻按钮夹角（度）；半径放大后收紧，保证屏上可见左中右三个
-        static let buttonAngleStep: Double = 15
-        /// Click Wheel 小刻度步长（度），与 HubClickWheelTicks.minorStep 一致
-        static let clickTickStep: Double = 3
-        /// 小于此转角视为点击而非刮环
-        static let tapMaxDegrees: Double = 10
-        /// 奶油卡相对顶部的预留（问候区下方；含左侧大头像）
-        static let headerBlockHeight: CGFloat = 152
         static let avatarSize: CGFloat = 60
+        static let accordionSpacing: CGFloat = 8
+        static let accordionPadding: CGFloat = 10
+        static let stripCorner: CGFloat = 22
+        static let containerCorner: CGFloat = 28
+        /// 竖向：收起条高度
+        static let collapsedStripHeight: CGFloat = 56
+        /// 竖向：展开条高度
+        static let expandedStripHeight: CGFloat = 240
+        static let progressRingSize: CGFloat = 56
+        /// 顶栏打卡 / 词库选择胶囊统一高度，避免长文案把右侧撑高
+        static let capsuleHeight: CGFloat = 40
     }
     
     private var hubActions: [StudyHubAction] { StudyHubAction.allCases }
-    
-    private var selectedHubAction: StudyHubAction {
-        let count = hubActions.count
-        let idx = ((hubActionIndex % count) + count) % count
-        return hubActions[idx]
-    }
     
     private var reviewedDayStarts: Set<Date> {
         let calendar = Calendar.current
@@ -247,7 +264,10 @@ struct StudyView: View {
         Group {
             if words.isEmpty {
                 ZStack(alignment: .top) {
-                    StudyHubAtmosphereBackground(includeBottomTeal: false)
+                    VocabAtmosphereBackground(
+                        accent: atmosphereAccent,
+                        secondaryAccent: atmospherePreviousAccent
+                    )
                     VStack(alignment: .leading, spacing: 16) {
                         hubHeaderOnBrand
                         EmptyLibraryPrompt(
@@ -268,168 +288,33 @@ struct StudyView: View {
                     .padding(.top, 8)
                 }
             } else {
-                ZStack {
-                    StudyHubAtmosphereBackground(includeBottomTeal: true)
-                    
-                    GeometryReader { geo in
-                        let metrics = StudyHubStackMetrics(
-                            size: geo.size,
-                            stackOffsetY: HubLayout.headerBlockHeight - 88
-                        )
-                        let action = selectedHubAction
-                        let available = isHubActionAvailable(action)
-                        
-                        ZStack(alignment: .top) {
-                            hubHeaderOnBrand
-                                .padding(.horizontal, HubLayout.horizontalInset)
-                                .padding(.top, 8)
-                                .zIndex(8)
-                            
-                            hubCreamCard(
-                                bottomClear: StudyHubStackMetrics.isPadLandscapeLarge(geo.size)
-                                    ? max(300, geo.size.height * 0.34)
-                                    : 200
-                            )
-                                .padding(.top, HubLayout.headerBlockHeight + 28)
-                                .frame(maxWidth: .infinity, alignment: .top)
-                                .zIndex(1)
-                            
-                            // 第三部分：橙色大圆（微渐变 + 描边 + 投影，增加层次）
-                            ZStack {
-                                Circle()
-                                    .fill(LinearGradient.vocabGoldProgress)
-                                DiagonalStripePattern(lineColor: Color.vocabInk.opacity(0.55))
-                                    .opacity(0.22)
-                                    .clipShape(Circle())
-                                Circle()
-                                    .strokeBorder(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.white.opacity(0.40),
-                                                Color.clear,
-                                                Color.black.opacity(0.14)
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        ),
-                                        lineWidth: 1.5
-                                    )
-                            }
-                            .frame(width: metrics.orangeRadius * 2, height: metrics.orangeRadius * 2)
-                            .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 6)
-                            .position(metrics.center)
-                            .zIndex(2)
-                            .allowsHitTesting(false)
-                            
-                            // Click Wheel 刻度：钟表式，圆心与半径同第五部分
-                            HubClickWheelTicks(
-                                center: metrics.center,
-                                radius: metrics.buttonRadius
-                            )
-                            .stroke(
-                                Color.white.opacity(0.32),
-                                style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
-                            )
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .zIndex(2)
-                            .allowsHitTesting(false)
-                            
-                            // 五钮视觉：圆心与第三、四部分一致，半径在二者之间
-                            ForEach(hubActions) { hubAction in
-                                let delta = hubAction.rawValue - hubActionIndex
-                                let angleDeg = Double(delta) * HubLayout.buttonAngleStep + ringDragDegrees
-                                let absDelta = abs(Double(delta) - ringDragDegrees / HubLayout.buttonAngleStep)
-                                let scale = ringDiameter(for: visualStep(absDelta)) / HubLayout.sideDiameter
-                                let emphasized = abs(angleDeg) < HubLayout.buttonAngleStep * 0.45
-                                
-                                ringActionKnob(
-                                    action: hubAction,
-                                    scale: scale,
-                                    emphasized: emphasized
-                                )
-                                .position(
-                                    metrics.point(
-                                        on: metrics.buttonRadius,
-                                        angleFromVerticalDegrees: angleDeg
-                                    )
-                                )
-                                .opacity(opacityForRing(absDelta: absDelta))
-                                .zIndex(emphasized ? 6 : 4)
-                                .allowsHitTesting(false)
-                            }
-                            
-                            // 第四部分：青绿圆 + 上缘尖角（同一 Path，避免透出橙环斜纹）
-                            HubTealDiskWithNotch(
-                                center: metrics.center,
-                                radius: metrics.tealRadius
-                            )
-                            .fill(
-                                RadialGradient(
-                                    colors: [Color.vocabTeal, Color.vocabTeal.opacity(0.85)],
-                                    center: UnitPoint(
-                                        x: metrics.center.x / max(geo.size.width, 1),
-                                        y: metrics.center.y / max(geo.size.height, 1)
-                                    ),
-                                    startRadius: 0,
-                                    endRadius: metrics.tealRadius
-                                )
-                            )
-                            .shadow(color: .black.opacity(0.22), radius: 14, x: 0, y: -2)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .zIndex(3)
-                            .allowsHitTesting(false)
-                            
-                            // Click Wheel 热区：橙环 − 青圆（切向刮动）
-                            StudyHubAnnulus(
-                                center: metrics.center,
-                                outerRadius: metrics.orangeRadius,
-                                innerRadius: metrics.tealRadius
-                            )
-                            .fill(Color.white.opacity(0.001), style: FillStyle(eoFill: true, antialiased: true))
-                            .contentShape(
-                                StudyHubAnnulus(
-                                    center: metrics.center,
-                                    outerRadius: metrics.orangeRadius,
-                                    innerRadius: metrics.tealRadius
-                                ),
-                                eoFill: true
-                            )
-                            .gesture(clickWheelGesture(center: metrics.center, metrics: metrics))
-                            .zIndex(4)
-                            
-                            // 青绿圆内：标题 / 说明（点击开始）
-                            Button {
-                                activateSelectedHubAction()
-                            } label: {
-                                VStack(spacing: 8) {
-                                    Text(action.titleKey.rawValue.localized)
-                                        .font(.title3.weight(.bold))
-                                        .fontDesign(.rounded)
-                                        .foregroundStyle(.white)
-                                        .multilineTextAlignment(.center)
-                                    
-                                    Text(hubDetailSubtitle(for: action))
-                                        .font(.footnote)
-                                        .foregroundStyle(.white.opacity(0.9))
-                                        .multilineTextAlignment(.center)
-                                        .lineLimit(3)
-                                        .minimumScaleFactor(0.85)
-                                        .frame(maxWidth: min(220, geo.size.width * 0.55))
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(VocabPressButtonStyle())
-                            .disabled(!available || isStartingReview)
-                            .opacity(available ? 1 : 0.45)
-                            .accessibilityLabel(LocalizedKey.hubStart.rawValue.localized)
-                            .position(x: metrics.center.x, y: metrics.contentY)
-                            .zIndex(7)
-                            .animation(.easeInOut(duration: 0.22), value: hubActionIndex)
+                ZStack(alignment: .top) {
+                    VocabAtmosphereBackground(
+                        accent: atmosphereAccent,
+                        secondaryAccent: atmospherePreviousAccent
+                    )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            collapseAccordion()
                         }
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .coordinateSpace(name: "hubClickWheel")
-                        .clipped()
+                    
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            hubHeaderOnBrand
+                            hubAccordion
+                            Color.clear
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: 120)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    collapseAccordion()
+                                }
+                        }
+                        .padding(.horizontal, HubLayout.horizontalInset)
+                        .padding(.top, 8)
+                        .padding(.bottom, 12)
                     }
+                    .scrollIndicators(.hidden)
                 }
             }
         }
@@ -477,25 +362,32 @@ struct StudyView: View {
             }
             
             HStack(spacing: 8) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                Text("\(LocalizedKey.checkIn.rawValue.localized) \(checkInStreak)\(LocalizedKey.consecutiveDays.rawValue.localized)")
-                    .font(.callout.weight(.semibold))
+                if checkInStreak > 0 {
+                    HStack(spacing: 8) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("\(LocalizedKey.checkIn.rawValue.localized) \(checkInStreak)\(LocalizedKey.consecutiveDays.rawValue.localized)")
+                            .font(.callout.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .frame(height: HubLayout.capsuleHeight)
+                    .vocabCapsuleChrome()
+                    .contentShape(Capsule())
+                    .accessibilityElement(children: .combine)
+                }
+                
+                Spacer(minLength: 8)
+                
+                hubSheetCapsule
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Capsule().fill(Color(hex: "1A1A1A")))
-            .padding(3)
-            .background(Capsule().fill(Color.black.opacity(0.18)))
-            .opacity(checkInStreak > 0 ? 1 : 0)
-            .accessibilityHidden(checkInStreak <= 0)
-            .accessibilityElement(children: .combine)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
     
-    // MARK: - 2. Cream Card
+    // MARK: - Capsule sheet picker + Accordion
     
     private var hubSheetWordCount: Int { filteredWords.count }
     
@@ -513,337 +405,503 @@ struct StudyView: View {
         return CGFloat(hubSheetMasteredCount) / CGFloat(hubSheetWordCount)
     }
     
-    private func hubCreamCard(bottomClear: CGFloat = 200) -> some View {
-        VStack(alignment: .leading, spacing: 20) {
-            hubSheetPickerHeader
-            hubProgressMetrics
-            // 底部留白，让橙圆叠上来时不挡住进度区；大屏横屏加高以盖住侧边粉底
-            Color.clear.frame(height: bottomClear)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            UnevenRoundedRectangle(
-                topLeadingRadius: HubLayout.cardCorner,
-                bottomLeadingRadius: 0,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: HubLayout.cardCorner,
-                style: .continuous
-            )
-            .fill(Color.vocabSurface)
-            .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 6)
-            .overlay(
-                UnevenRoundedRectangle(
-                    topLeadingRadius: HubLayout.cardCorner,
-                    bottomLeadingRadius: 0,
-                    bottomTrailingRadius: 0,
-                    topTrailingRadius: HubLayout.cardCorner,
-                    style: .continuous
-                )
-                .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
-            )
+    private var hubSheetMenuSelection: Binding<UUID?> {
+        Binding(
+            get: {
+                selectedSheetIds.count == 1 ? selectedSheetIds.first : nil
+            },
+            set: { newValue in
+                if let id = newValue {
+                    selectedSheetIds = [id]
+                } else {
+                    selectedSheetIds = []
+                }
+            }
         )
     }
     
-    private var hubSheetPickerHeader: some View {
-        Button {
-            showSheetPicker = true
-        } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(LocalizedKey.currentWordSheet)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 6) {
-                    Text(selectedSheetName)
-                        .font(.title2.weight(.bold))
-                        .fontDesign(.rounded)
-                        .foregroundStyle(Color.vocabInk)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Image(systemName: "chevron.down")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Spacer(minLength: 0)
+    private var hubSheetCapsule: some View {
+        Menu {
+            Picker(selection: hubSheetMenuSelection) {
+                Text(LocalizedKey.allSheets)
+                    .tag(Optional<UUID>.none)
+                ForEach(sheetsWithWords) { sheet in
+                    Label(sheet.localizedDisplayName, systemImage: sheet.displaySymbolName)
+                        .tag(Optional(sheet.id))
                 }
+            } label: {
+                EmptyView()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+        } label: {
+            HStack(spacing: 8) {
+                Text(LocalizedKey.currentWordSheet)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .layoutPriority(-1)
+                Text(selectedSheetName)
+                    .font(.subheadline.weight(.semibold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.55))
+            }
+            .padding(.horizontal, 16)
+            .frame(height: HubLayout.capsuleHeight)
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .vocabCapsuleChrome()
+        .contentShape(Capsule())
         .accessibilityLabel(LocalizedKey.selectWordSheet.rawValue.localized)
         .accessibilityValue(selectedSheetName)
     }
     
-    private var hubProgressMetrics: some View {
-        Button {
-            selectedTab = .progress
-        } label: {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 16) {
-                    hubMetricColumn(
-                        systemImage: "checkmark.seal.fill",
-                        label: LocalizedKey.mastered.rawValue.localized,
-                        value: "\(hubSheetMasteredCount) / \(hubSheetWordCount)",
-                        valueColor: Color.vocabTeal
-                    )
-                    hubMetricColumn(
-                        systemImage: "chart.bar.fill",
-                        label: LocalizedKey.totalProgress.rawValue.localized,
-                        value: "\(hubSheetMasteryPercent)%",
-                        valueColor: Color.vocabBrand
-                    )
-                }
-                
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.vocabBrand.opacity(0.12))
-                        Capsule()
-                            .fill(LinearGradient.vocabBrandProgress)
-                            .frame(width: geo.size.width * hubSheetMasteryProgress)
-                    }
-                }
-                .frame(height: 6)
-                .accessibilityHidden(true)
+    private var hubAccordion: some View {
+        let heights = accordionStripHeights()
+        return VStack(spacing: HubLayout.accordionSpacing) {
+            ForEach(Array(hubActions.enumerated()), id: \.element.id) { index, action in
+                let isExpanded = accordionSelection == action
+                hubAccordionStrip(
+                    action: action,
+                    isExpanded: isExpanded,
+                    height: heights[index]
+                )
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(VocabPressButtonStyle())
-        .accessibilityLabel(LocalizedKey.learningProgress.rawValue.localized)
-        .accessibilityValue(
-            "\(LocalizedKey.mastered.rawValue.localized) \(hubSheetMasteredCount) / \(hubSheetWordCount)，\(LocalizedKey.totalProgress.rawValue.localized) \(hubSheetMasteryPercent)%"
+        .padding(HubLayout.accordionPadding)
+        .background(
+            VocabChromeContainerBackground(cornerRadius: HubLayout.containerCorner)
         )
-        .accessibilityHint(LocalizedKey.tabProgress.rawValue.localized)
+        .accessibilityElement(children: .contain)
     }
     
-    private func hubMetricColumn(
-        systemImage: String,
-        label: String,
-        value: String,
-        valueColor: Color
+    private func accordionStripHeights() -> [CGFloat] {
+        let count = hubActions.count
+        guard count > 0 else { return [] }
+        if let selected = accordionSelection,
+           let selectedIndex = hubActions.firstIndex(of: selected) {
+            return (0..<count).map {
+                $0 == selectedIndex ? HubLayout.expandedStripHeight : HubLayout.collapsedStripHeight
+            }
+        }
+        return Array(repeating: HubLayout.collapsedStripHeight, count: count)
+    }
+    
+    private func hubAccordionStrip(
+        action: StudyHubAction,
+        isExpanded: Bool,
+        height: CGFloat
     ) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(Color.primary.opacity(0.06)))
-                .accessibilityHidden(true)
+        let available = isHubActionAvailable(action)
+        let strip = ZStack(alignment: .topLeading) {
+            if isExpanded {
+                VocabGlassBackground(cornerRadius: HubLayout.stripCorner)
+            } else if let progress = accordionProgress(for: action) {
+                // 收起态：自左向右水位；未完成区右侧淡遮罩
+                GeometryReader { geo in
+                    ZStack(alignment: .trailing) {
+                        RoundedRectangle(cornerRadius: HubLayout.stripCorner, style: .continuous)
+                            .fill(action.stripColor)
+                        Rectangle()
+                            .fill(Color.black.opacity(0.18))
+                            .frame(width: geo.size.width * (1 - progress))
+                    }
+                }
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: progress)
+            } else {
+                // 习题 / 猜词：无水位，整条实色
+                RoundedRectangle(cornerRadius: HubLayout.stripCorner, style: .continuous)
+                    .fill(action.stripColor)
+            }
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.title3.weight(.bold))
-                    .fontDesign(.rounded)
-                    .monospacedDigit()
-                    .foregroundStyle(valueColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+            hubAccordionCollapsed(action: action)
+                .opacity(isExpanded ? 0 : 1)
+                .allowsHitTesting(false)
+            
+            if isExpanded {
+                hubAccordionExpanded(action: action, available: available)
+                    .opacity(accordionDetailVisible ? 1 : 0)
             }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+        .clipShape(RoundedRectangle(cornerRadius: HubLayout.stripCorner, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: HubLayout.stripCorner, style: .continuous))
+        .opacity(available || isExpanded ? 1 : 0.72)
+        .background(alignment: .bottom) {
+            if isExpanded {
+                Ellipse()
+                    .fill(action.stripColor.opacity(0.55))
+                    .frame(height: 36)
+                    .blur(radius: 22)
+                    .padding(.horizontal, 28)
+                    .offset(y: 10)
+                    .allowsHitTesting(false)
+            }
+        }
+        
+        return Group {
+            if isExpanded {
+                strip
+                    .accessibilityElement(children: .contain)
+                    .accessibilityAddTraits(.isSelected)
+            } else {
+                strip
+                    .onTapGesture {
+                        selectAccordion(action)
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(accordionAccessibilityLabel(for: action))
+                    .accessibilityValue(accordionAccessibilityValue(for: action, isExpanded: false))
+                    .accessibilityHint(LocalizedKey.hubStart.rawValue.localized)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction {
+                        selectAccordion(action)
+                    }
+            }
+        }
+    }
+    
+    private func hubAccordionCollapsed(action: StudyHubAction) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: action.symbol)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(action.inkOnStrip)
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.black.opacity(0.14))
+                )
+            
+            Text(action.titleKey.rawValue.localized)
+                .font(.subheadline.weight(.bold))
+                .fontDesign(.rounded)
+                .foregroundStyle(action.inkOnStrip)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            
             Spacer(minLength: 0)
+            
+            Text(accordionMetric(for: action))
+                .font(.subheadline.weight(.bold))
+                .fontDesign(.rounded)
+                .monospacedDigit()
+                .foregroundStyle(action.inkOnStrip.opacity(0.85))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    // MARK: - Click Wheel
-    
-    private func clickWheelGesture(center: CGPoint, metrics: StudyHubStackMetrics) -> some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .named("hubClickWheel"))
-            .onChanged { value in
-                let finger = angleFromVertical(center: center, point: value.location)
-                let distance = hypot(value.location.x - center.x, value.location.y - center.y)
-                // 仅在环带内跟手
-                guard distance >= metrics.tealRadius * 0.92,
-                      distance <= metrics.orangeRadius * 1.05 else { return }
+    private func hubAccordionExpanded(action: StudyHubAction, available: Bool) -> some View {
+        let stats = accordionExpandedStats(for: action)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Button {
+                    collapseAccordion()
+                } label: {
+                    Image(systemName: action.symbol)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(action.stripColor)
+                        )
+                        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(LocalizedKey.cancel.rawValue.localized)
                 
-                if let last = ringLastFingerAngle {
-                    var delta = finger - last
-                    if delta > 180 { delta -= 360 }
-                    if delta < -180 { delta += 360 }
-                    ringDragDegrees += delta
-                    if abs(ringDragDegrees) > HubLayout.tapMaxDegrees {
-                        ringDidScrub = true
+                Text(action.titleKey.rawValue.localized)
+                    .font(.subheadline.weight(.semibold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                
+                Spacer(minLength: 0)
+                
+                if let badge = accordionBadgeTitle(for: action) {
+                    Text(badge)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .lineLimit(1)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Color.white.opacity(0.12)))
+                }
+            }
+            
+            VocabCardHairline()
+            
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .lastTextBaseline, spacing: 6) {
+                        Text(accordionMetric(for: action))
+                            .font(.system(size: 44, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                        
+                        Text(accordionHeroUnit(for: action))
+                            .font(.caption.weight(.medium))
+                            .fontDesign(.rounded)
+                            .foregroundStyle(.white.opacity(0.72))
                     }
-                    // 越过半格则切换 index（不循环，到头停止）
-                    let steps = Int((ringDragDegrees / HubLayout.buttonAngleStep).rounded(.towardZero))
-                    if steps != 0, abs(ringDragDegrees) >= HubLayout.buttonAngleStep * 0.55 {
-                        let applied = rotateHubRing(by: -steps)
-                        if applied != 0 {
-                            ringDragDegrees -= Double(-applied) * HubLayout.buttonAngleStep
-                        } else {
-                            ringDragDegrees = clampRingOverscroll(ringDragDegrees)
+                    
+                    Text(hubDetailSubtitle(for: action))
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.55))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                }
+                
+                Spacer(minLength: 8)
+                
+                if let progress = stats.barProgress, let percent = stats.percent {
+                    accordionProgressRing(
+                        progress: progress,
+                        percent: percent,
+                        tint: action.stripColor
+                    )
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        TapGesture().onEnded {
+                            selectedTab = .progress
                         }
-                    } else {
-                        ringDragDegrees = clampRingOverscroll(ringDragDegrees)
+                    )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(LocalizedKey.learningProgress.rawValue.localized)
+                    .accessibilityValue(stats.accessibilityValue)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction {
+                        selectedTab = .progress
                     }
-                    fireClickWheelTickIfNeeded()
-                } else {
-                    prepareClickWheelTickBaseline()
-                }
-                ringLastFingerAngle = finger
-            }
-            .onEnded { value in
-                defer {
-                    ringLastFingerAngle = nil
-                    ringDidScrub = false
-                    ringLastTickIndex = nil
-                }
-                
-                if !ringDidScrub {
-                    // 轻点环：选中最靠近触点的项；已选中则启动
-                    let finger = angleFromVertical(center: center, point: value.location)
-                    if let tapped = nearestAction(toFingerAngle: finger) {
-                        if tapped.rawValue == hubActionIndex {
-                            activateSelectedHubAction()
-                        } else {
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                                _ = rotateHubRing(by: tapped.rawValue - hubActionIndex)
-                                ringDragDegrees = 0
-                            }
-                        }
-                    }
-                    return
-                }
-                
-                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                    let steps = Int((ringDragDegrees / HubLayout.buttonAngleStep).rounded())
-                    if steps != 0 {
-                        _ = rotateHubRing(by: -steps)
-                    }
-                    ringDragDegrees = 0
                 }
             }
-    }
-    
-    /// 触点相对圆心的方位角：0° 为正上，顺时针为正
-    private func angleFromVertical(center: CGPoint, point: CGPoint) -> Double {
-        let dx = point.x - center.x
-        let dy = center.y - point.y
-        return atan2(dx, dy) * 180 / .pi
-    }
-    
-    /// Click Wheel 绝对转角（度）：index 格 + 当前拖拽残差
-    private var clickWheelAbsoluteDegrees: Double {
-        Double(hubActionIndex) * HubLayout.buttonAngleStep + ringDragDegrees
-    }
-    
-    private func prepareClickWheelTickBaseline() {
-        VocabHaptics.prepareSelection()
-        ringLastTickIndex = Int(floor(clickWheelAbsoluteDegrees / HubLayout.clickTickStep))
-    }
-    
-    /// 每跨过一小刻度触发一次 selection，模拟 iPod Click Wheel「哒哒」
-    private func fireClickWheelTickIfNeeded() {
-        let tick = Int(floor(clickWheelAbsoluteDegrees / HubLayout.clickTickStep))
-        if let last = ringLastTickIndex, tick != last {
-            VocabHaptics.selection()
-            VocabHaptics.prepareSelection()
-        }
-        ringLastTickIndex = tick
-    }
-    
-    /// 到头后限制继续外拨的角度（轻微阻尼，不循环）
-    private func clampRingOverscroll(_ degrees: Double) -> Double {
-        let limit = HubLayout.buttonAngleStep * 0.32
-        let last = hubActions.count - 1
-        if hubActionIndex <= 0, degrees > 0 {
-            return min(degrees, limit)
-        }
-        if hubActionIndex >= last, degrees < 0 {
-            return max(degrees, -limit)
-        }
-        return degrees
-    }
-    
-    private func nearestAction(toFingerAngle finger: Double) -> StudyHubAction? {
-        var best: StudyHubAction?
-        var bestDiff = 180.0
-        for action in hubActions {
-            let delta = action.rawValue - hubActionIndex
-            let itemAngle = Double(delta) * HubLayout.buttonAngleStep + ringDragDegrees
-            var diff = abs(finger - itemAngle)
-            if diff > 180 { diff = 360 - diff }
-            if diff < bestDiff {
-                bestDiff = diff
-                best = action
+            
+            Spacer(minLength: 0)
+            
+            VocabCardHairline()
+            
+            Button {
+                activateHubAction(action)
+            } label: {
+                Text(LocalizedKey.hubStart.rawValue.localized)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(available ? Color(hex: "1A1A1A") : .white.opacity(0.5))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(available ? action.stripColor : Color.white.opacity(0.12))
+                    )
+                    .contentShape(Capsule())
             }
+            .buttonStyle(.plain)
+            .disabled(!available || isStartingReview)
+            .opacity(available ? 1 : 0.7)
+            .accessibilityLabel(LocalizedKey.hubStart.rawValue.localized)
         }
-        guard let best else { return selectedHubAction }
-        return bestDiff <= HubLayout.buttonAngleStep * 1.1 ? best : selectedHubAction
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
     
-    private func visualStep(_ absDelta: Double) -> Int {
-        if absDelta < 0.55 { return 0 }
-        if absDelta < 1.55 { return 1 }
-        return 2
-    }
-    
-    private func opacityForRing(absDelta: Double) -> Double {
-        if absDelta < 0.55 { return 1 }
-        if absDelta < 1.55 { return 0.85 }
-        if absDelta < 2.4 { return 0.55 }
-        return 0.28
-    }
-    
-    private func ringDiameter(for absDelta: Int) -> CGFloat {
-        switch absDelta {
-        case 0: return HubLayout.centerDiameter
-        case 1: return HubLayout.sideDiameter
-        default: return HubLayout.farDiameter
-        }
-    }
-    
-    /// 线性切换，夹在首尾之间；返回实际移动步数
-    @discardableResult
-    private func rotateHubRing(by step: Int) -> Int {
-        let last = hubActions.count - 1
-        let newIndex = min(max(hubActionIndex + step, 0), last)
-        let applied = newIndex - hubActionIndex
-        if applied != 0 {
-            // 大刻度吸附：比小刻度 selection 稍重，形成「密哒 + 吸附咔」
-            VocabHaptics.impact(.light)
-            hubActionIndex = newIndex
-        }
-        return applied
-    }
-    
-    private func ringActionKnob(action: StudyHubAction, scale: CGFloat, emphasized: Bool) -> some View {
-        let disabled = !isHubActionAvailable(action)
-        let base = HubLayout.sideDiameter
+    private func accordionProgressRing(progress: CGFloat, percent: Int, tint: Color) -> some View {
+        let clamped = min(max(progress, 0), 1)
         return ZStack {
             Circle()
-                .fill(Color.vocabSurface)
-                .overlay {
-                    DiagonalStripePattern(lineColor: Color.vocabInk.opacity(0.45))
-                        .opacity(0.18)
-                        .clipShape(Circle())
-                }
-                .opacity(emphasized ? 0 : 1)
-            
+                .stroke(Color.white.opacity(0.12), lineWidth: 5)
             Circle()
-                .fill(LinearGradient.vocabBrandProgress)
-                .opacity(emphasized ? 1 : 0)
-            
-            Circle()
-                .strokeBorder(Color.white.opacity(0.5), lineWidth: 1.5)
-            
-            Image(systemName: action.symbol)
-                .font(.system(size: base * 0.34, weight: .semibold))
-                .foregroundStyle(emphasized ? Color.white : Color.vocabInk.opacity(0.85))
+                .trim(from: 0, to: clamped)
+                .stroke(tint, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            Text("\(percent)%")
+                .font(.caption.weight(.semibold))
+                .fontDesign(.rounded)
+                .monospacedDigit()
+                .foregroundStyle(tint)
         }
-        .frame(width: base, height: base)
-        .compositingGroup()
-        .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 4)
-        .shadow(color: Color.vocabBrand.opacity(emphasized ? 0.32 : 0), radius: 10, x: 0, y: 4)
-        .scaleEffect(scale)
-        .opacity(disabled ? 0.55 : 1)
-        .accessibilityLabel(action.titleKey.rawValue.localized)
-        .accessibilityAddTraits(action.rawValue == hubActionIndex ? .isSelected : [])
-        .accessibilityHint(LocalizedKey.hubStart.rawValue.localized)
+        .frame(width: HubLayout.progressRingSize, height: HubLayout.progressRingSize)
+        .accessibilityHidden(true)
+    }
+    
+    private func selectAccordion(_ action: StudyHubAction) {
+        guard accordionSelection != action else { return }
+        accordionDetailVisible = false
+        let previous = accordionSelection?.stripColor ?? atmosphereAccent
+        let widthAnim: Animation = reduceMotion
+            ? .easeOut(duration: 0.15)
+            : .spring(response: 0.42, dampingFraction: 0.86)
+        withAnimation(widthAnim) {
+            atmospherePreviousAccent = previous
+            accordionSelection = action
+        }
+        VocabHaptics.impact(.light)
+        let delay = reduceMotion ? 0.0 : 0.16
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .easeOut(duration: 0.22)) {
+                accordionDetailVisible = true
+            }
+        }
+    }
+    
+    private func collapseAccordion() {
+        guard accordionSelection != nil else { return }
+        accordionDetailVisible = false
+        let previous = accordionSelection?.stripColor ?? atmosphereAccent
+        let widthAnim: Animation = reduceMotion
+            ? .easeOut(duration: 0.15)
+            : .spring(response: 0.42, dampingFraction: 0.86)
+        withAnimation(widthAnim) {
+            atmospherePreviousAccent = previous
+            accordionSelection = nil
+        }
+    }
+    
+    /// 各入口水位比例；习题 / 猜词返回 nil（无水位）
+    private func accordionProgress(for action: StudyHubAction) -> CGFloat? {
+        switch action {
+        case .recommended:
+            let pool = words.filter(\.learned).count
+            guard pool > 0 else { return 0 }
+            return max(0, min(1, 1 - CGFloat(recommendedReviewWords.count) / CGFloat(pool)))
+        case .reviewAll:
+            guard hubSheetWordCount > 0 else { return 0 }
+            return CGFloat(todayReviewedMasteredCount) / CGFloat(hubSheetWordCount)
+        case .continueLast:
+            let total = max(hubSheetWordCount, 1)
+            return max(0, min(1, 1 - CGFloat(continueLastQueueWords.count) / CGFloat(total)))
+        case .exercise, .guess:
+            return nil
+        }
+    }
+    
+    private func accordionBadgeTitle(for action: StudyHubAction) -> String? {
+        switch action {
+        case .recommended, .exercise, .guess:
+            return LocalizedKey.allSheets.rawValue.localized
+        case .reviewAll, .continueLast:
+            return selectedSheetName
+        }
+    }
+    
+    private struct AccordionExpandedStats {
+        var primaryLabel: String
+        var primaryValue: String
+        var percentLabel: String?
+        var percent: Int?
+        var barProgress: CGFloat?
+        
+        var accessibilityValue: String {
+            var parts = ["\(primaryLabel) \(primaryValue)"]
+            if let percentLabel, let percent {
+                parts.append("\(percentLabel) \(percent)%")
+            }
+            return parts.joined(separator: "，")
+        }
+    }
+    
+    /// 展开态进度文案 / 比例，与各入口水位语义一致
+    private func accordionExpandedStats(for action: StudyHubAction) -> AccordionExpandedStats {
+        let progressKey = LocalizedKey.totalProgress.rawValue.localized
+        switch action {
+        case .recommended:
+            let due = recommendedReviewWords.count
+            let pool = words.filter(\.learned).count
+            let bar = accordionProgress(for: .recommended) ?? 0
+            return AccordionExpandedStats(
+                primaryLabel: LocalizedKey.recommendedReview.rawValue.localized,
+                primaryValue: "\(due) / \(pool)",
+                percentLabel: progressKey,
+                percent: Int((bar * 100).rounded()),
+                barProgress: bar
+            )
+        case .reviewAll:
+            let bar = accordionProgress(for: .reviewAll) ?? 0
+            return AccordionExpandedStats(
+                primaryLabel: LocalizedKey.mastered.rawValue.localized,
+                primaryValue: "\(todayReviewedMasteredCount) / \(hubSheetWordCount)",
+                percentLabel: progressKey,
+                percent: Int((bar * 100).rounded()),
+                barProgress: bar
+            )
+        case .continueLast:
+            let remaining = continueLastQueueWords.count
+            let bar = accordionProgress(for: .continueLast) ?? 0
+            return AccordionExpandedStats(
+                primaryLabel: LocalizedKey.continueLast.rawValue.localized,
+                primaryValue: "\(remaining) / \(hubSheetWordCount)",
+                percentLabel: progressKey,
+                percent: Int((bar * 100).rounded()),
+                barProgress: bar
+            )
+        case .exercise:
+            return AccordionExpandedStats(
+                primaryLabel: LocalizedKey.tabExercise.rawValue.localized,
+                primaryValue: "\(words.count)",
+                percentLabel: nil,
+                percent: nil,
+                barProgress: nil
+            )
+        case .guess:
+            return AccordionExpandedStats(
+                primaryLabel: LocalizedKey.tabGuess.rawValue.localized,
+                primaryValue: "\(words.count)",
+                percentLabel: nil,
+                percent: nil,
+                barProgress: nil
+            )
+        }
+    }
+    
+    /// 今日已复习且仍掌握（当前词库），用于「复习全部」日进度水位
+    private var todayReviewedMasteredCount: Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return filteredWords.filter { word in
+            guard word.learned, let last = word.lastReviewed else { return false }
+            return calendar.startOfDay(for: last) == today
+        }.count
+    }
+    
+    private func accordionAccessibilityValue(for action: StudyHubAction, isExpanded: Bool) -> String {
+        guard !isExpanded, let progress = accordionProgress(for: action) else { return "" }
+        return "\(LocalizedKey.totalProgress.rawValue.localized) \(Int((progress * 100).rounded()))%"
+    }
+    
+    private func accordionMetric(for action: StudyHubAction) -> String {
+        switch action {
+        case .recommended: return "\(recommendedReviewWords.count)"
+        case .reviewAll: return "\(filteredWords.count)"
+        case .continueLast: return "\(continueLastQueueWords.count)"
+        case .exercise, .guess: return "\(words.count)"
+        }
+    }
+    
+    private func accordionHeroUnit(for action: StudyHubAction) -> String {
+        switch action {
+        case .recommended, .continueLast:
+            return LocalizedKey.libraryFilterDue.rawValue.localized
+        case .reviewAll, .exercise, .guess:
+            return LocalizedKey.statTotal.rawValue.localized
+        }
+    }
+    
+    private func accordionAccessibilityLabel(for action: StudyHubAction) -> String {
+        switch action {
+        case .recommended:
+            return recommendedReviewAccessibilityLabel
+        default:
+            return "\(action.titleKey.rawValue.localized)，\(accordionMetric(for: action))"
+        }
     }
     
     private func hubDetailSubtitle(for action: StudyHubAction) -> String {
@@ -882,8 +940,7 @@ struct StudyView: View {
     }
     
     @MainActor
-    private func activateSelectedHubAction() {
-        let action = selectedHubAction
+    private func activateHubAction(_ action: StudyHubAction) {
         guard isHubActionAvailable(action) else { return }
         switch action {
         case .recommended:
@@ -906,24 +963,34 @@ struct StudyView: View {
                     studyHubView
                 } else if studyQueue.isEmpty {
                     // 复习完成
-                    reviewCompletedView
+                    ZStack {
+                        VocabAtmosphereBackground(
+                            accent: .vocabBrand,
+                            secondaryAccent: .vocabGold
+                        )
+                        reviewCompletedView
+                    }
                 } else {
                     // 显示闪卡
                     if let firstWord = studyQueue.first {
-                        VStack(spacing: 0) {
-                            sessionProgressBar
-                            FlashCardView(
-                                word: firstWord,
-                                deckLayerCount: min(2, max(0, studyQueue.count - 1)),
-                                onResult: { remembered in
-                                    handleReviewResult(wordId: firstWord.id, remembered: remembered)
-                                }
+                        ZStack {
+                            VocabAtmosphereBackground(
+                                accent: .vocabBrand,
+                                secondaryAccent: .vocabTeal
                             )
-                            .padding(.horizontal, 20)
-                            .padding(.top, 8)
+                            VStack(spacing: 0) {
+                                sessionProgressBar
+                                FlashCardView(
+                                    word: firstWord,
+                                    deckLayerCount: min(2, max(0, studyQueue.count - 1)),
+                                    onResult: { remembered in
+                                        handleReviewResult(wordId: firstWord.id, remembered: remembered)
+                                    }
+                                )
+                                .padding(.horizontal, 20)
+                                .padding(.top, 8)
+                            }
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.vocabCanvas)
                     }
                 }
             }
@@ -943,12 +1010,7 @@ struct StudyView: View {
                 }
             }
         }
-        .sheet(isPresented: $showSheetPicker) {
-            SheetPickerView(
-                sheets: sheetsWithWords,
-                selectedSheetIds: $selectedSheetIds
-            )
-        }
+        .preferredColorScheme(.dark)
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
@@ -971,7 +1033,7 @@ struct StudyView: View {
                 showGuess = false
             }
         }
-        .background(reviewModeSelected ? Color.vocabCanvas : Color.clear)
+        .background(reviewModeSelected ? Color.black : Color.clear)
         .onChange(of: studyQueue.isEmpty) { oldValue, newValue in
             // 当学习队列为空时，检查是否有"忘记了"的单词
             if newValue && !forgottenWordIds.isEmpty && reviewMode == .continueLast {
@@ -1010,7 +1072,7 @@ struct StudyView: View {
                 Text(String(format: LocalizedKey.sessionProgress.rawValue.localized, currentIndex, total))
                     .font(.subheadline.weight(.semibold))
                     .fontDesign(.rounded)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
                     .monospacedDigit()
                     .contentTransition(.numericText())
                 
@@ -1087,7 +1149,7 @@ struct StudyView: View {
             Text("\(max(sessionInitialCount, 0))")
                 .font(.system(size: 56, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(Color.vocabInk)
+                .foregroundStyle(.white)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
             
@@ -1095,10 +1157,10 @@ struct StudyView: View {
                 Text(hasForgotten ? LocalizedKey.roundComplete : LocalizedKey.greatJob)
                     .font(.title2.weight(.bold))
                     .fontDesign(.rounded)
-                    .foregroundStyle(Color.vocabInk)
+                    .foregroundStyle(.white)
                 Text(completionMessage)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.65))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1148,7 +1210,7 @@ struct StudyView: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.55))
             }
             .padding(.horizontal, 28)
             
@@ -1307,221 +1369,5 @@ struct StudyView: View {
             isStartingReview = false
             resetSessionCombo()
         }
-    }
-}
-
-/// 背单词 Hub 全屏氛围底（对齐词库 `LibraryAtmosphereBackground`：外层 ignoresSafeArea）
-private struct StudyHubAtmosphereBackground: View {
-    var includeBottomTeal: Bool
-    
-    var body: some View {
-        GeometryReader { geo in
-            let largeLandscape = StudyHubStackMetrics.isPadLandscapeLarge(geo.size)
-            let padLandscape = StudyHubStackMetrics.isPadLandscape(geo.size)
-            ZStack(alignment: .top) {
-                if includeBottomTeal, largeLandscape {
-                    // 13" 横屏：粉（含侧边楔形）/ 青绿；中段不用 Surface，避免奶油卡底色被同化
-                    VStack(spacing: 0) {
-                        Color.vocabBrand
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        Color.vocabTeal
-                            .frame(height: geo.size.height * 0.28)
-                    }
-                } else {
-                    Color.vocabBrand
-                    
-                    if includeBottomTeal {
-                        Color.vocabTeal
-                            .frame(height: geo.size.height * (padLandscape ? 0.55 : 0.52))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                    }
-                }
-            }
-            .frame(width: geo.size.width, height: geo.size.height)
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-    }
-}
-
-/// 圆叠圆布局：橙圆 / 青圆同圆心
-private struct StudyHubStackMetrics {
-    let size: CGSize
-    let center: CGPoint
-    let orangeRadius: CGFloat
-    let tealRadius: CGFloat
-    let buttonRadius: CGFloat
-    let contentY: CGFloat
-    
-    /// iPad 类横屏（短边仍够高）：竖屏手机公式会把青圆顶出可视区
-    static func isPadLandscape(_ size: CGSize) -> Bool {
-        size.width > size.height && size.height >= 560
-    }
-    
-    /// 13" 类横屏（宽 ≥ 1300）：需更平弧 + 三色氛围底
-    static func isPadLandscapeLarge(_ size: CGSize) -> Bool {
-        isPadLandscape(size) && size.width >= 1300
-    }
-    
-    /// iPad 类竖屏：手机公式橙半径随宽度放大，黄/绿占比过高
-    static func isPadPortrait(_ size: CGSize) -> Bool {
-        size.height > size.width && size.width >= 600
-    }
-    
-    /// - Parameter stackOffsetY: 随问候区增高同步下移（相对原 headerBlockHeight 88）
-    init(size: CGSize, stackOffsetY: CGFloat = 0) {
-        self.size = size
-        
-        let orange: CGFloat
-        let centerY: CGFloat
-        let teal: CGFloat
-        
-        if Self.isPadLandscapeLarge(size) {
-            // 13" 横屏：上移压奶油、加厚橙环、加大半径压平侧边
-            let halfW = size.width * 0.5
-            orange = max(size.width * 0.95, size.height * 1.20, halfW * 1.40)
-            let minRing: CGFloat = 110
-            teal = min(orange * 0.79, orange - minRing)
-            let orangeTop = min(max(size.height * 0.42, 320), size.height * 0.46)
-            centerY = orangeTop + orange
-        } else if Self.isPadLandscape(size) {
-            // 宽度主导半径 → 弧更平，左右盖住奶油卡底角（消除白三角）
-            let halfW = size.width * 0.5
-            orange = max(size.width * 0.90, size.height * 1.15, halfW * 1.35)
-            // 环带略宽于上一版，青绿上缘再下移一点
-            let minRing: CGFloat = 90
-            teal = min(orange * 0.84, orange - minRing)
-            // 整圈略下移，减少屏内青绿占比（勿超 ~0.55，以免侧边露白）
-            let orangeTop = min(max(size.height * 0.52, 300), size.height * 0.55)
-            centerY = orangeTop + orange
-        } else if Self.isPadPortrait(size) {
-            // 上移压住奶油卡底；加大半径压平左右弧，避免侧边露青绿
-            let halfW = size.width * 0.5
-            orange = max(
-                size.width * 1.10 * 1.40,
-                size.height * 0.55 * 1.35,
-                halfW * 1.45
-            )
-            let minRing: CGFloat = 100
-            teal = min(orange * 0.78, orange - minRing)
-            // 约对齐奶油进度区下缘，叠进卡底透明区
-            let orangeTop = min(max(size.height * 0.36, 340), size.height * 0.40)
-            centerY = orangeTop + orange
-        } else {
-            // 第三部分：橙圆放大，但避免过大顶穿奶油卡
-            orange = min(size.width * 0.92, size.height * 0.74) * 1.65
-            // 圆心尽量下移：橙圆上缘落在奶油卡进度区下方，露出奶油卡
-            let creamSafeBottom: CGFloat = 360
-            centerY = max(size.height * 1.18 + stackOffsetY, creamSafeBottom + orange)
-            let minRing: CGFloat = 150
-            teal = min(orange * 0.70, orange - minRing)
-        }
-        
-        self.orangeRadius = orange
-        let center = CGPoint(x: size.width * 0.5, y: centerY)
-        self.center = center
-        self.tealRadius = teal
-        // 第五部分：与橙/青同圆心，半径取二者中间
-        self.buttonRadius = (orange + teal) * 0.5
-        // 标题/说明锚在青绿圆内
-        let tealTop = center.y - teal
-        if Self.isPadLandscape(size) || Self.isPadPortrait(size) {
-            // 按「屏内可见青绿」锚点，避免被 height*0.86 夹到橙环上
-            let visible = max(size.height - tealTop, 0)
-            let factor: CGFloat = Self.isPadPortrait(size) ? 0.38 : 0.42
-            self.contentY = tealTop + visible * factor
-        } else {
-            self.contentY = min(tealTop + teal * 0.58, size.height * 0.86)
-        }
-    }
-    
-    func point(on radius: CGFloat, angleFromVerticalDegrees: Double) -> CGPoint {
-        let rad = angleFromVerticalDegrees * .pi / 180
-        return CGPoint(
-            x: center.x + CGFloat(sin(rad)) * radius,
-            y: center.y - CGFloat(cos(rad)) * radius
-        )
-    }
-}
-
-
-/// Click Wheel 热区：外圆减内圆
-private struct StudyHubAnnulus: Shape {
-    var center: CGPoint
-    var outerRadius: CGFloat
-    var innerRadius: CGFloat
-    
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.addEllipse(in: CGRect(
-            x: center.x - outerRadius,
-            y: center.y - outerRadius,
-            width: outerRadius * 2,
-            height: outerRadius * 2
-        ))
-        path.addEllipse(in: CGRect(
-            x: center.x - innerRadius,
-            y: center.y - innerRadius,
-            width: innerRadius * 2,
-            height: innerRadius * 2
-        ))
-        return path
-    }
-}
-
-/// 青绿圆 + 上缘尖角（同一填充，避免尖角透出橙环）
-private struct HubTealDiskWithNotch: Shape {
-    var center: CGPoint
-    var radius: CGFloat
-    var notchWidth: CGFloat = 36
-    var notchHeight: CGFloat = 22
-    
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.addEllipse(in: CGRect(
-            x: center.x - radius,
-            y: center.y - radius,
-            width: radius * 2,
-            height: radius * 2
-        ))
-        let tipY = center.y - radius - notchHeight
-        let baseY = center.y - radius + 2
-        path.move(to: CGPoint(x: center.x, y: tipY))
-        path.addLine(to: CGPoint(x: center.x + notchWidth / 2, y: baseY))
-        path.addLine(to: CGPoint(x: center.x - notchWidth / 2, y: baseY))
-        path.closeSubpath()
-        return path
-    }
-}
-
-/// Click Wheel 钟表刻度（沿橙/青中间半径）
-private struct HubClickWheelTicks: Shape {
-    var center: CGPoint
-    var radius: CGFloat
-    var minorStep: Double = 3
-    var majorStep: Double = 15
-    var minorLength: CGFloat = 11
-    var majorLength: CGFloat = 20
-    /// 从正上方起算的可见弧范围（度）
-    var startAngle: Double = -110
-    var endAngle: Double = 110
-    
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        var angle = startAngle
-        while angle <= endAngle + 0.001 {
-            let mod = angle.truncatingRemainder(dividingBy: majorStep)
-            let isMajor = abs(mod) < 0.01 || abs(abs(mod) - majorStep) < 0.01
-            let len = isMajor ? majorLength : minorLength
-            let rad = angle * .pi / 180
-            let s = CGFloat(sin(rad))
-            let c = CGFloat(cos(rad))
-            let inner = radius - len * 0.5
-            let outer = radius + len * 0.5
-            path.move(to: CGPoint(x: center.x + s * inner, y: center.y - c * inner))
-            path.addLine(to: CGPoint(x: center.x + s * outer, y: center.y - c * outer))
-            angle += minorStep
-        }
-        return path
     }
 }

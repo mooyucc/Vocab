@@ -2,7 +2,7 @@
 //  ExerciseView.swift
 //  Vocab
 //
-//  推荐复习单词的完形填空：默认用词条例句，工具栏可 AI 出新题。
+//  完形填空：优先用今日推荐复习词，无到期时用全部已记住词；默认用词条例句，工具栏可 AI 出新题。
 //
 
 import SwiftUI
@@ -10,6 +10,7 @@ import SwiftData
 
 struct ExerciseView: View {
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizedString = LocalizedString.shared
     @Binding var isExerciseInProgress: Bool
     @Binding var selectedTab: AppView
     @Query private var words: [Word]
@@ -44,6 +45,13 @@ struct ExerciseView: View {
         SpacedRepetition.dueWords(from: words)
     }
     
+    /// 优先今日到期；无到期时回退到全部已「记住」的词，便于随时练习。
+    private var practiceWords: [Word] {
+        let due = dueWords
+        if !due.isEmpty { return due }
+        return words.filter(\.learned)
+    }
+    
     private var bankItems: [ClozeItem] {
         bankOrder.compactMap { id in items.first(where: { $0.wordId == id }) }
     }
@@ -70,12 +78,13 @@ struct ExerciseView: View {
         NavigationStack {
             Group {
                 if !hasStarted {
-                    if dueWords.isEmpty {
+                    if practiceWords.isEmpty {
                         emptyDueView
                     } else {
-                        startView
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                } else if dueWords.isEmpty && items.isEmpty {
+                } else if practiceWords.isEmpty && items.isEmpty {
                     emptyDueView
                 } else if items.isEmpty && !isGenerating {
                     emptyExamplesView
@@ -103,7 +112,7 @@ struct ExerciseView: View {
                                 Image(systemName: "sparkles")
                             }
                         }
-                        .disabled(isGenerating || (dueWords.isEmpty && items.isEmpty))
+                        .disabled(isGenerating || (practiceWords.isEmpty && items.isEmpty))
                         .accessibilityLabel(LocalizedKey.exerciseAINewSet.rawValue.localized)
                         .accessibilityHint(LocalizedKey.exerciseAINewSetHint.rawValue.localized)
                         
@@ -113,7 +122,7 @@ struct ExerciseView: View {
                             } label: {
                                 Image(systemName: "arrow.clockwise")
                             }
-                            .disabled(isGenerating || dueWords.isEmpty)
+                            .disabled(isGenerating || practiceWords.isEmpty)
                             .accessibilityLabel(LocalizedKey.exerciseReshuffle.rawValue.localized)
                         }
                     }
@@ -131,6 +140,11 @@ struct ExerciseView: View {
         }
         .toolbar(isExerciseInProgress ? .hidden : .visible, for: .tabBar)
         .background(Color.vocabCanvas)
+        .onAppear {
+            if !hasStarted && !practiceWords.isEmpty {
+                startExercise()
+            }
+        }
         .confirmationDialog(
             String(format: LocalizedKey.exercisePickForm.rawValue.localized, pendingTerm),
             isPresented: $showFormPicker,
@@ -179,51 +193,6 @@ struct ExerciseView: View {
                 .accessibilityLabel(LocalizedKey.exerciseGenerating.rawValue.localized)
             }
         }
-    }
-    
-    // MARK: - Start
-    
-    private var startView: some View {
-        VStack(spacing: 20) {
-            Spacer(minLength: 0)
-            
-            Text(LocalizedKey.exerciseStartDescription)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            
-            Button(action: startExercise) {
-                VStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(LinearGradient.vocabTealProgress)
-                            .frame(width: 128, height: 128)
-                            .shadow(color: Color.vocabTeal.opacity(0.35), radius: 16, x: 0, y: 8)
-                        VStack(spacing: 6) {
-                            Image(systemName: "text.badge.checkmark")
-                                .font(.system(size: 34, weight: .semibold))
-                            Text(LocalizedKey.exerciseStart)
-                                .font(.subheadline.weight(.semibold))
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.8)
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                    }
-                    Text("\(dueWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .buttonStyle(VocabPressButtonStyle())
-            .accessibilityLabel("\(LocalizedKey.exerciseStart.rawValue.localized)，\(dueWords.count)\(LocalizedKey.wordsToReview.rawValue.localized)")
-            
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     // MARK: - Empty
@@ -526,10 +495,11 @@ struct ExerciseView: View {
         isExerciseInProgress = false
         isGenerating = false
         applyItems([])
+        dismiss()
     }
     
     private func rebuildLocalSet() {
-        let built = ClozeBuilder.localItems(from: dueWords)
+        let built = ClozeBuilder.localItems(from: practiceWords)
         applyItems(built)
     }
     
@@ -538,12 +508,12 @@ struct ExerciseView: View {
             let mapped = items.compactMap { item in words.first(where: { $0.id == item.wordId }) }
             if !mapped.isEmpty { return mapped }
         }
-        return Array(dueWords.shuffled().prefix(ClozeBuilder.maxCount))
+        return Array(practiceWords.shuffled().prefix(ClozeBuilder.maxCount))
     }
     
     private func requestAINewSet() {
         guard !isGenerating else { return }
-        guard !dueWords.isEmpty || !items.isEmpty else { return }
+        guard !practiceWords.isEmpty || !items.isEmpty else { return }
         if !fills.isEmpty || isChecked {
             showAIReplaceConfirm = true
         } else {

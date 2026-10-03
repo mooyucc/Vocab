@@ -13,11 +13,13 @@ struct FlashCardView: View {
     let deckLayerCount: Int
     let onResult: (Bool) -> Void
     let showActionButtons: Bool
+    /// 专注模式等场景在卡片上显示编辑按钮；单字库详情由导航栏提供入口时可关闭
+    let showsCardEditButton: Bool
     
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
-    @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject private var localizedString = LocalizedString.shared
     @State private var isFlipped = false
     @State private var forgotTrigger: Int = 0
     @State private var rememberedTrigger: Int = 0
@@ -25,6 +27,7 @@ struct FlashCardView: View {
     @State private var isUpdatingExample = false
     @State private var updateExampleError: String?
     @State private var showPaywall = false
+    @State private var showEditWord = false
     
     @State private var dragOffset: CGFloat = 0
     @State private var cardOpacity: Double = 1
@@ -45,12 +48,14 @@ struct FlashCardView: View {
         word: Word,
         deckLayerCount: Int = 0,
         onResult: @escaping (Bool) -> Void,
-        showActionButtons: Bool = true
+        showActionButtons: Bool = true,
+        showsCardEditButton: Bool = true
     ) {
         self.word = word
         self.deckLayerCount = deckLayerCount
         self.onResult = onResult
         self.showActionButtons = showActionButtons
+        self.showsCardEditButton = showsCardEditButton
     }
     
     var body: some View {
@@ -89,6 +94,10 @@ struct FlashCardView: View {
                         if swipeEnabled {
                             swipeDecisionOverlay
                                 .allowsHitTesting(false)
+                        }
+                        
+                        if showsCardEditButton {
+                            cardEditButton
                         }
                     }
                     .id(word.id)
@@ -135,6 +144,35 @@ struct FlashCardView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView()
         }
+        .sheet(isPresented: $showEditWord) {
+            EditWordView(word: word)
+        }
+    }
+    
+    private var cardEditButton: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button {
+                    showEditWord = true
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .frame(width: 36, height: 36)
+                        .background(Color.white.opacity(0.12))
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5)
+                        )
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(LocalizedKey.editWordTitle.rawValue.localized)
+            }
+            Spacer()
+        }
+        .padding(16)
     }
     
     // MARK: - Swipe
@@ -200,7 +238,7 @@ struct FlashCardView: View {
     }
     
     private var deckFill: Color {
-        Color.vocabSurface
+        Color.white.opacity(0.08)
     }
     
     private func deckLayer(depth: Int, cardHeight: CGFloat) -> some View {
@@ -209,9 +247,9 @@ struct FlashCardView: View {
             .fill(deckFill)
             .overlay(
                 RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
-                    .stroke(Color.primary.opacity(colorScheme == .dark ? 0.16 : 0.08), lineWidth: 1)
+                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 0.5)
             )
-            .shadow(color: .black.opacity(colorScheme == .dark ? 0.2 : 0.06), radius: 8, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 4)
             .scaleEffect(1 - deckScaleStep * effectiveDepth, anchor: .bottom)
             .offset(y: -(cardHeight * deckScaleStep + deckPeek) * effectiveDepth)
             .opacity(0.72 - 0.18 * Double(depth - 1))
@@ -374,7 +412,6 @@ struct CardFront: View {
     let isFlipped: Bool
     var showsSwipeHint: Bool = false
     
-    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var speechManager = SpeechManager.shared
     @State private var playButtonTrigger: Int = 0
     
@@ -383,16 +420,16 @@ struct CardFront: View {
             Text(isFlipped ? LocalizedKey.answer.rawValue.localized : LocalizedKey.question.rawValue.localized)
                 .font(.caption)
                 .fontWeight(.semibold)
-                .foregroundStyle(.tint)
+                .foregroundStyle(Color.vocabBrand)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(.tint.opacity(0.1))
+                .background(Color.vocabBrand.opacity(0.16))
                 .clipShape(Capsule())
             
             Text(word.term)
                 .font(.largeTitle.weight(.bold))
                 .fontDesign(.rounded)
-                .foregroundStyle(.primary)
+                .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.6)
                 .lineLimit(3)
@@ -401,7 +438,7 @@ struct CardFront: View {
                 Text(word.pronunciation.isEmpty ? "/.../" : word.pronunciation)
                     .font(.subheadline)
                     .fontDesign(.serif)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.65))
                     .italic()
                 
                 Button(action: {
@@ -410,9 +447,9 @@ struct CardFront: View {
                 }) {
                     Image(systemName: speechManager.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
                         .font(.title3)
-                        .foregroundStyle(.tint)
+                        .foregroundStyle(Color.vocabBrand)
                         .frame(width: 44, height: 44)
-                        .background(.tint.opacity(0.1))
+                        .background(Color.vocabBrand.opacity(0.16))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -426,36 +463,21 @@ struct CardFront: View {
                 Text(LocalizedKey.clickToFlip)
                     .font(.caption)
                     .fontWeight(.medium)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.white.opacity(0.4))
                 if showsSwipeHint {
                     Text(LocalizedKey.swipeReviewHint)
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.55))
                 }
             }
             .padding(.bottom, 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(32)
-        .background(cardFill)
-        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
-                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.22 : 0.10), lineWidth: 1)
-        )
-        .shadow(
-            color: .black.opacity(colorScheme == .dark ? 0.45 : 0.14),
-            radius: 18,
-            x: 0,
-            y: 8
-        )
+        .vocabGlassCard(cornerRadius: VocabTheme.Radius.sheet, glow: .vocabBrand)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(LocalizedKey.question.rawValue.localized)：\(word.term)，\(word.pronunciation.isEmpty ? "/.../" : word.pronunciation)")
-    }
-    
-    private var cardFill: Color {
-        Color.vocabSurface
     }
 }
 
@@ -473,28 +495,29 @@ struct CardBack: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Text(word.partOfSpeech)
                     .font(.subheadline)
                     .fontDesign(.serif)
                     .italic()
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(.white.opacity(0.72))
                 
                 Circle()
-                    .fill(.white.opacity(0.9))
+                    .fill(.white.opacity(0.45))
                     .frame(width: 4, height: 4)
                 
                 Text(word.pronunciation)
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(.white.opacity(0.72))
             }
             
             Text(word.definition)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
-                .padding(.bottom, 8)
+            
+            VocabCardHairline()
             
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -506,29 +529,31 @@ struct CardBack: View {
                     
                     Text(word.exampleCn)
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.72))
                         .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
                     
                     if !word.root.isEmpty || !word.synonyms.isEmpty || !word.antonyms.isEmpty {
+                        VocabCardHairline()
+                            .padding(.top, 4)
+                        
                         VStack(alignment: .leading, spacing: 6) {
                             if !word.root.isEmpty {
                                 Text("\(LocalizedKey.root.rawValue.localized)：\(word.root)")
                                     .font(.footnote)
-                                    .foregroundStyle(.white.opacity(0.85))
+                                    .foregroundStyle(.white.opacity(0.72))
                             }
                             if !word.synonyms.isEmpty {
                                 Text("\(LocalizedKey.synonyms.rawValue.localized)：\(word.synonyms)")
                                     .font(.footnote)
-                                    .foregroundStyle(.white.opacity(0.85))
+                                    .foregroundStyle(.white.opacity(0.72))
                             }
                             if !word.antonyms.isEmpty {
                                 Text("\(LocalizedKey.antonyms.rawValue.localized)：\(word.antonyms)")
                                     .font(.footnote)
-                                    .foregroundStyle(.white.opacity(0.85))
+                                    .foregroundStyle(.white.opacity(0.72))
                             }
                         }
-                        .padding(.top, 8)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -536,10 +561,8 @@ struct CardBack: View {
             .scrollDisabled(scrollDisabled)
             .scrollBounceBehavior(.basedOnSize)
             .frame(minHeight: 88, maxHeight: .infinity, alignment: .top)
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white.opacity(0.15))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            
+            VocabCardHairline()
             
             HStack(spacing: 8) {
                 Button(action: {
@@ -563,7 +586,11 @@ struct CardBack: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(.white.opacity(0.2))
+                    .background(Color.white.opacity(0.12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5)
+                    )
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -587,7 +614,11 @@ struct CardBack: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(.white.opacity(0.2))
+                    .background(Color.white.opacity(0.12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5)
+                    )
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .disabled(exampleTextForSpeech.isEmpty)
@@ -595,17 +626,10 @@ struct CardBack: View {
                 .applySensoryFeedback(trigger: readExampleTrigger, style: .soft)
                 .accessibilityLabel(LocalizedKey.readExampleSentence.rawValue.localized)
             }
-            .padding(.top, 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(32)
-        .background(LinearGradient.vocabBrandProgress)
-        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
-                .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
+        .padding(28)
+        .vocabGlassCard(cornerRadius: VocabTheme.Radius.sheet, glow: .vocabBrand)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(LocalizedKey.answer.rawValue.localized)：\(word.term)，\(word.partOfSpeech)，\(word.definition)")
     }

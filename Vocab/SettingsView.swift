@@ -14,7 +14,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var authManager: AuthenticationManager
-    @ObservedObject private var settingsManager = AppSettingsManager.shared
+    @ObservedObject private var localizedString = LocalizedString.shared
     @Query private var words: [Word]
     @Query private var sheets: [WordSheet]
     @State private var showSignOutAlert = false
@@ -65,21 +65,6 @@ struct SettingsView: View {
                             HStack {
                                 Image(systemName: "arrow.right.square")
                                 Text(LocalizedKey.signOut)
-                            }
-                        }
-                        
-                        NavigationLink {
-                            DeleteAccountConfirmView(
-                                modelContext: modelContext,
-                                words: words,
-                                sheets: sheets
-                            )
-                        } label: {
-                            HStack {
-                                Image(systemName: "person.crop.circle.badge.minus")
-                                    .foregroundStyle(.red)
-                                Text(LocalizedKey.deleteAccount.rawValue.localized)
-                                    .foregroundStyle(.red)
                             }
                         }
                     } else {
@@ -268,7 +253,7 @@ struct SettingsView: View {
                     }
                 )
             }
-            .preferredColorScheme(settingsManager.appearanceMode.colorScheme)
+            .preferredColorScheme(.dark)
         }
     }
 }
@@ -363,9 +348,9 @@ struct EditUserNameView: View {
     @Binding var userName: String
     let onSave: (String) -> Void
     let onCancel: () -> Void
+    @ObservedObject private var localizedString = LocalizedString.shared
     @FocusState private var isTextFieldFocused: Bool
     @State private var editedName: String
-    @ObservedObject private var settingsManager = AppSettingsManager.shared
     
     init(userName: Binding<String>, onSave: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
         self._userName = userName

@@ -12,7 +12,6 @@ import UserNotifications
 @main
 struct VocabApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var settingsManager = AppSettingsManager.shared
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var brandColorManager = BrandColorManager.shared
     /// 延后创建，避免在 `App` 属性初始化阶段阻塞主线程，使首帧能先绘出加载界面。
@@ -25,17 +24,17 @@ struct VocabApp: App {
                     ContentView()
                         .environmentObject(authManager)
                         .environmentObject(brandColorManager)
-                        .preferredColorScheme(settingsManager.appearanceMode.colorScheme)
                         .modelContainer(container)
                 } else {
                     ZStack {
-                        Color.vocabCanvas
+                        Color.black
                             .ignoresSafeArea()
                         ProgressView()
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+            .preferredColorScheme(.dark)
             .task {
                 guard modelContainer == nil else { return }
                 // 让 SwiftUI 先提交首帧（加载态），再执行 CloudKit + SwiftData 的同步初始化。

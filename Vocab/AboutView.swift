@@ -9,19 +9,20 @@ import SwiftUI
 
 struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizedString = LocalizedString.shared
     
     var appVersion: String {
         if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
             return version
         }
-        return "2.3"
+        return "2.70"
     }
     
     var buildNumber: String {
         if let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
             return build
         }
-        return "10"
+        return "18"
     }
     
     var body: some View {
@@ -169,6 +170,28 @@ struct VersionUpdateView: View {
     var body: some View {
         Form {
             Section {
+                VersionItem(
+                    version: "2.70",
+                    date: LocalizedKey.versionUpdate270Date.rawValue.localized,
+                    updates: [
+                        LocalizedKey.versionUpdate270UI.rawValue.localized,
+                        LocalizedKey.versionUpdate270Dark.rawValue.localized,
+                        LocalizedKey.versionUpdate270Tabs.rawValue.localized,
+                        LocalizedKey.versionUpdate270Icons.rawValue.localized
+                    ]
+                )
+                VersionItem(
+                    version: "2.60",
+                    date: LocalizedKey.versionUpdate260Date.rawValue.localized,
+                    updates: [
+                        LocalizedKey.versionUpdate260StudyHub.rawValue.localized,
+                        LocalizedKey.versionUpdate260ExerciseGuess.rawValue.localized,
+                        LocalizedKey.versionUpdate260Progress.rawValue.localized,
+                        LocalizedKey.versionUpdate260Sheets.rawValue.localized,
+                        LocalizedKey.versionUpdate260OnboardingLang.rawValue.localized,
+                        LocalizedKey.versionUpdate260AccountUI.rawValue.localized
+                    ]
+                )
                 VersionItem(
                     version: "2.4",
                     date: LocalizedKey.versionUpdate24Date.rawValue.localized,

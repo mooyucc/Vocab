@@ -11,6 +11,7 @@ import SwiftData
 struct DeleteAccountConfirmView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var authManager: AuthenticationManager
+    @ObservedObject private var localizedString = LocalizedString.shared
     let modelContext: ModelContext
     let words: [Word]
     let sheets: [WordSheet]

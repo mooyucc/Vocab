@@ -17,12 +17,17 @@ struct WordSheetEditorView: View {
     
     @State private var name: String = ""
     @State private var symbolName: String = "book.closed"
-    @State private var colorName: String = "accent"
+    @State private var colorName: String = WordSheetAppearance.colorNames[0]
+    @State private var originalColorName: String = WordSheetAppearance.colorNames[0]
     @State private var isPinned: Bool = false
     @State private var errorMessage: String?
     @State private var showError = false
     
     private var isEditing: Bool { sheet != nil }
+    
+    private var canResetColor: Bool {
+        isEditing && colorName != originalColorName
+    }
     
     var body: some View {
         NavigationStack {
@@ -58,35 +63,39 @@ struct WordSheetEditorView: View {
                 }
                 
                 Section {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(WordSheetAppearance.colorNames, id: \.self) { color in
-                                Button {
-                                    colorName = color
-                                    VocabHaptics.impact(.light)
-                                } label: {
-                                    colorSwatch(for: color)
-                                        .frame(width: 32, height: 32)
-                                        .overlay {
-                                            if colorName == color {
-                                                Image(systemName: "checkmark")
-                                                    .font(.caption.weight(.bold))
-                                                    .foregroundStyle(color == "accent" || color == "orange" || color == "pink" || color == "gray" ? Color.vocabInk : .white)
-                                            }
+                    HStack(spacing: 12) {
+                        ForEach(WordSheetAppearance.colorNames, id: \.self) { color in
+                            Button {
+                                colorName = color
+                                VocabHaptics.impact(.light)
+                            } label: {
+                                Circle()
+                                    .fill(WordSheetAppearance.color(named: color))
+                                    .frame(width: 32, height: 32)
+                                    .overlay {
+                                        if colorName == color {
+                                            Image(systemName: "checkmark")
+                                                .font(.caption.weight(.bold))
+                                                .foregroundStyle(
+                                                    WordSheetAppearance.prefersDarkForeground(color)
+                                                    ? Color(hex: "1A1A1A")
+                                                    : .white
+                                                )
                                         }
-                                        .frame(width: 44, height: 44)
-                                        .contentShape(Circle())
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(color == "accent" ? LocalizedKey.resetSheetColor.rawValue.localized : color)
-                                .accessibilityAddTraits(colorName == color ? .isSelected : [])
+                                    }
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Circle())
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(color)
+                            .accessibilityAddTraits(colorName == color ? .isSelected : [])
                         }
+                        Spacer(minLength: 0)
                     }
                     
-                    if colorName != "accent" {
+                    if canResetColor {
                         Button {
-                            colorName = "accent"
+                            colorName = originalColorName
                             VocabHaptics.impact(.light)
                         } label: {
                             Label(LocalizedKey.resetSheetColor.rawValue.localized, systemImage: "arrow.counterclockwise")
@@ -127,8 +136,17 @@ struct WordSheetEditorView: View {
                         name = sheet.name
                     }
                     symbolName = sheet.displaySymbolName
-                    colorName = sheet.colorName.isEmpty ? "accent" : sheet.colorName
+                    let others = allSheets.filter { $0.id != sheet.id }
+                    let index = WordSheetService.sortedSheets(allSheets).firstIndex(where: { $0.id == sheet.id }) ?? others.count
+                    colorName = WordSheetAppearance.resolvedColorName(sheet.colorName, at: index)
+                    originalColorName = WordSheetAppearance.isKnownColorName(sheet.originalColorName)
+                        ? sheet.originalColorName
+                        : colorName
                     isPinned = sheet.isPinned
+                } else {
+                    let next = WordSheetAppearance.nextColorName(for: allSheets)
+                    colorName = next
+                    originalColorName = next
                 }
             }
             .alert(LocalizedKey.editSheet.rawValue.localized, isPresented: $showError) {
@@ -140,30 +158,7 @@ struct WordSheetEditorView: View {
     }
     
     private var selectedColor: Color {
-        if colorName == "accent" || colorName.isEmpty {
-            return Color.vocabBrand
-        }
-        return WordSheetAppearance.color(named: colorName)
-    }
-    
-    @ViewBuilder
-    private func colorSwatch(for color: String) -> some View {
-        if color == "accent" {
-            Circle()
-                .fill(
-                    AngularGradient(
-                        colors: [Color.vocabBrand, Color.vocabSurface, Color.vocabGold, Color.vocabBrand],
-                        center: .center
-                    )
-                )
-                .overlay {
-                    Circle()
-                        .strokeBorder(Color.vocabInk.opacity(0.12), lineWidth: 1)
-                }
-        } else {
-            Circle()
-                .fill(WordSheetAppearance.color(named: color))
-        }
+        WordSheetAppearance.color(named: colorName)
     }
     
     private func save() {

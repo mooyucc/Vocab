@@ -24,23 +24,64 @@ enum WordSheetAppearance {
         "text.book.closed.fill"
     ]
     
+    /// 与背单词 Hub 手风琴条同序同色
     static let colorNames: [String] = [
-        "accent", "blue", "green", "orange", "red", "purple", "pink", "teal", "indigo", "gray"
+        "hubGold", "hubBrand", "hubSky", "hubIndigo", "hubTeal"
     ]
     
     static func color(named name: String) -> Color {
         switch name {
-        case "blue": return .blue
-        case "green": return .green
-        case "orange": return .orange
-        case "red": return .red
-        case "purple": return .purple
-        case "pink": return .pink
-        case "teal": return .teal
-        case "indigo": return .indigo
-        case "gray": return .gray
-        default: return .vocabBrand
+        case "hubGold": return Color(hex: "F1B145")
+        case "hubBrand": return Color(hex: "E36C85")
+        case "hubSky": return Color(hex: "7DD3FC")
+        case "hubIndigo": return Color(hex: "A5B4FC")
+        case "hubTeal": return Color(hex: "6BA89C")
+        default: return Color(hex: "E36C85")
         }
+    }
+    
+    static func isKnownColorName(_ name: String) -> Bool {
+        colorNames.contains(name)
+    }
+    
+    /// 浅底条上用深色字（与手风琴 ink 一致）
+    static func prefersDarkForeground(_ name: String) -> Bool {
+        switch name {
+        case "hubGold", "hubSky", "hubIndigo": return true
+        default: return false
+        }
+    }
+    
+    static func nextColorName(for sheets: [WordSheet]) -> String {
+        colorNames[sheets.count % colorNames.count]
+    }
+    
+    static func resolvedColorName(_ name: String, at index: Int) -> String {
+        if isKnownColorName(name) { return name }
+        return colorNames[index % colorNames.count]
+    }
+    
+    /// 将旧 accent/系统色名固化为手风琴色，并补齐创建色
+    @discardableResult
+    static func normalizeColors(in sheets: [WordSheet], context: ModelContext) -> Bool {
+        let ordered = WordSheetService.sortedSheets(sheets)
+        var changed = false
+        for (index, sheet) in ordered.enumerated() {
+            let resolved = resolvedColorName(sheet.colorName, at: index)
+            if sheet.colorName != resolved {
+                sheet.colorName = resolved
+                changed = true
+            }
+            let original = sheet.originalColorName
+            if original.isEmpty || !isKnownColorName(original) {
+                sheet.originalColorName = resolved
+                changed = true
+            }
+        }
+        if changed {
+            try? context.save()
+        }
+        return changed
     }
 }
 
@@ -247,7 +288,10 @@ enum WordSheetService {
         if let existing = findTodaySheet(in: sheets) {
             return existing
         }
-        let newSheet = WordSheet(name: isoDateString(from: Date()))
+        let newSheet = WordSheet(
+            name: isoDateString(from: Date()),
+            colorName: WordSheetAppearance.nextColorName(for: sheets)
+        )
         context.insert(newSheet)
         try? context.save()
         return newSheet
@@ -279,7 +323,8 @@ enum WordSheetService {
             sortOrder: nextSortOrder(for: sheets),
             isPinned: isPinned,
             symbolName: symbolName,
-            colorName: colorName
+            colorName: colorName,
+            originalColorName: colorName
         )
         context.insert(sheet)
         try? context.save()
@@ -416,6 +461,9 @@ extension WordSheet {
     }
     
     var tintColor: Color {
-        WordSheetAppearance.color(named: colorName.isEmpty ? "accent" : colorName)
+        let name = WordSheetAppearance.isKnownColorName(colorName)
+            ? colorName
+            : WordSheetAppearance.colorNames[0]
+        return WordSheetAppearance.color(named: name)
     }
 }

@@ -9,7 +9,8 @@ import SwiftUI
 
 struct FreeTrialWelcomeView: View {
     var onDismiss: () -> Void
-    
+    @ObservedObject private var localizedString = LocalizedString.shared
+
     var body: some View {
         VStack(spacing: 28) {
             Spacer()

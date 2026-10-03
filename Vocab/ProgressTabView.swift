@@ -11,15 +11,14 @@ import Charts
 
 struct ProgressTabView: View {
     @Binding var selectedTab: AppView
-    @EnvironmentObject var authManager: AuthenticationManager
     @Query private var words: [Word]
     @ObservedObject private var settingsManager = AppSettingsManager.shared
+    @ObservedObject private var localizedString = LocalizedString.shared
     
-    @State private var showSettings = false
     @State private var selectedMonthId: Date?
     
     private enum Layout {
-        static let horizontalInset: CGFloat = 20
+        static let horizontalInset: CGFloat = 16
         static let cardCorner: CGFloat = VocabTheme.Radius.card
         static let masteryRingSize: CGFloat = 112
         static let masteryRingLine: CGFloat = 14
@@ -40,32 +39,6 @@ struct ProgressTabView: View {
     
     private var locale: Locale {
         Locale(identifier: settingsManager.language.rawValue)
-    }
-    
-    private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 5..<12:
-            return LocalizedKey.goodMorning.rawValue.localized
-        case 12..<18:
-            return LocalizedKey.goodAfternoon.rawValue.localized
-        default:
-            return LocalizedKey.goodEvening.rawValue.localized
-        }
-    }
-    
-    private var displayName: String {
-        if let userName = authManager.userName, !userName.isEmpty {
-            return userName
-        }
-        return "Learner"
-    }
-    
-    private var todayDateText: String {
-        let formatter = DateFormatter()
-        formatter.locale = locale
-        formatter.setLocalizedDateFormatFromTemplate("EEE, d MMM")
-        return formatter.string(from: Date())
     }
     
     private var reviewedDayStarts: Set<Date> {
@@ -186,46 +159,43 @@ struct ProgressTabView: View {
     
     var body: some View {
         NavigationStack {
-            Group {
-                if words.isEmpty {
-                    VStack(alignment: .leading, spacing: 20) {
-                        header
+            ZStack(alignment: .top) {
+                VocabAtmosphereBackground(
+                    accent: .vocabBrand,
+                    secondaryAccent: .vocabGold
+                )
+                
+                VStack(spacing: 0) {
+                    header
+                    
+                    if words.isEmpty {
                         EmptyLibraryPrompt(
                             title: LocalizedKey.learningProgress.rawValue.localized,
                             systemImage: "chart.bar.fill"
                         ) {
                             selectedTab = .list
                         }
-                    }
-                    .padding(.horizontal, Layout.horizontalInset)
-                    .padding(.top, 12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            header
-                            Text(LocalizedKey.learningProgress)
-                                .font(.title.weight(.bold))
-                                .fontDesign(.rounded)
-                                .foregroundStyle(Color.vocabInk)
-                            masteryHero
-                            checkInSummaryCard
-                            activityChartSection
-                        }
+                        .padding(20)
+                        .vocabGlassCard(glow: .vocabBrand)
                         .padding(.horizontal, Layout.horizontalInset)
-                        .padding(.top, 12)
-                        .padding(.bottom, 32)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    } else {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 20) {
+                                masteryHero
+                                checkInSummaryCard
+                                activityChartSection
+                            }
+                            .padding(.horizontal, Layout.horizontalInset)
+                            .padding(.bottom, 32)
+                        }
+                        .scrollIndicators(.hidden)
                     }
-                    .scrollIndicators(.hidden)
                 }
             }
-            .background(Color.vocabCanvas)
             .toolbar(.hidden, for: .navigationBar)
         }
-        .background(Color.vocabCanvas)
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-        }
+        .preferredColorScheme(.dark)
         .onAppear {
             if selectedMonthId == nil {
                 selectedMonthId = monthlyActivity.last?.id
@@ -235,115 +205,96 @@ struct ProgressTabView: View {
     
     // MARK: - Header
     
+    private var headerSubtitle: String {
+        "\(LocalizedKey.thisWeek.rawValue.localized) \(weekCheckedCount)/7"
+    }
+    
     private var header: some View {
-        HStack(alignment: .top, spacing: 14) {
-            UserAvatarView(
-                image: authManager.avatarImage,
-                userName: authManager.userName ?? displayName,
-                size: 60,
-                style: .onCanvas
-            )
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(greeting)\(displayName)")
-                    .font(.title.weight(.bold))
-                    .fontDesign(.rounded)
-                    .foregroundStyle(Color.vocabInk)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-                Text(todayDateText)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 8)
-            Button {
-                showSettings = true
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
-                    .background(Color.vocabSurface)
-                    .clipShape(Circle())
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(LocalizedKey.settings.rawValue.localized)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(LocalizedKey.learningProgress)
+                .font(.title.weight(.bold))
+                .fontDesign(.rounded)
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+            Text(headerSubtitle)
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.75))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Layout.horizontalInset)
+        .padding(.top, 8)
+        .padding(.bottom, 16)
+        .accessibilityElement(children: .combine)
     }
     
     // MARK: - Check-in Card
     
     private var checkInSummaryCard: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .stroke(Color.vocabInk.opacity(0.12), lineWidth: 5)
-                Circle()
-                    .trim(from: 0, to: weekProgress)
-                    .stroke(
-                        Color.vocabGold,
-                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-            }
-            .frame(width: 44, height: 44)
-            .accessibilityHidden(true)
-            
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    Text(LocalizedKey.thisWeek)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.vocabInk.opacity(0.55))
-                    Spacer(minLength: 0)
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.vocabGold)
-                    Text("\(checkInStreak)")
-                        .font(.headline.weight(.bold))
-                        .fontDesign(.rounded)
-                        .monospacedDigit()
-                        .foregroundStyle(Color.vocabInk)
-                    Text(LocalizedKey.consecutiveDays)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.vocabInk.opacity(0.55))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.white.opacity(0.12), lineWidth: 5)
+                    Circle()
+                        .trim(from: 0, to: weekProgress)
+                        .stroke(
+                            Color.vocabGold,
+                            style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
                 }
+                .frame(width: 44, height: 44)
+                .accessibilityHidden(true)
                 
-                HStack(spacing: 0) {
-                    ForEach(checkInDays) { day in
-                        VStack(spacing: 4) {
-                            Circle()
-                                .fill(day.checked ? Color.vocabGold : Color.clear)
-                                .overlay(
-                                    Circle().stroke(
-                                        day.checked
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Text(LocalizedKey.thisWeek)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                        Spacer(minLength: 0)
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.vocabGold)
+                        Text("\(checkInStreak)")
+                            .font(.headline.weight(.bold))
+                            .fontDesign(.rounded)
+                            .monospacedDigit()
+                            .foregroundStyle(.white)
+                        Text(LocalizedKey.consecutiveDays)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                    
+                    HStack(spacing: 0) {
+                        ForEach(checkInDays) { day in
+                            VStack(spacing: 4) {
+                                Circle()
+                                    .fill(day.checked ? Color.vocabGold : Color.clear)
+                                    .overlay(
+                                        Circle().stroke(
+                                            day.checked
                                             ? Color.vocabGold
-                                            : Color.vocabInk.opacity(0.22),
-                                        lineWidth: 1.5
+                                            : Color.white.opacity(0.22),
+                                            lineWidth: 1.5
+                                        )
                                     )
-                                )
-                                .frame(width: 9, height: 9)
-                            Text(day.label)
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(Color.vocabInk.opacity(0.55))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
+                                    .frame(width: 9, height: 9)
+                                Text(day.label)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.55))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                            }
+                            .frame(maxWidth: .infinity)
                         }
-                        .frame(maxWidth: .infinity)
                     }
                 }
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
-                .fill(Color.vocabSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
-                        .strokeBorder(Color.vocabGold.opacity(0.35), lineWidth: 1)
-                )
-        )
+        .vocabGlassCard(glow: .vocabGold)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(LocalizedKey.checkIn.rawValue.localized)，\(checkInStreak)\(LocalizedKey.consecutiveDays.rawValue.localized)，\(LocalizedKey.thisWeek.rawValue.localized) \(weekCheckedCount)/7"
@@ -359,17 +310,19 @@ struct ProgressTabView: View {
                     Text("\(masteryPercent)%")
                         .font(.system(size: 64, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(Color.vocabInk)
+                        .foregroundStyle(.white)
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
                         .contentTransition(.numericText())
                     Text(LocalizedKey.totalProgress)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.72))
                 }
                 Spacer(minLength: 8)
                 masteryRing
             }
+            
+            VocabCardHairline()
             
             HStack(spacing: 12) {
                 Text(
@@ -380,22 +333,24 @@ struct ProgressTabView: View {
                     )
                 )
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.vocabInk)
+                .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
                 
                 Text("·")
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.white.opacity(0.35))
                 
                 Text("\(LocalizedKey.libraryFilterDue.rawValue.localized) \(dueCount)")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.72))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                 
                 Spacer(minLength: 0)
             }
         }
+        .padding(16)
+        .vocabGlassCard(glow: .vocabBrand)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(LocalizedKey.totalProgress.rawValue.localized) \(masteryPercent)%，\(String(format: LocalizedKey.masteredCountFormat.rawValue.localized, masteredCount, words.count))，\(LocalizedKey.libraryFilterDue.rawValue.localized) \(dueCount)"
@@ -429,21 +384,25 @@ struct ProgressTabView: View {
             HStack {
                 Text(String(format: LocalizedKey.reviewActivityMonthsFormat.rawValue.localized, Layout.monthCount))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.vocabInk)
+                    .foregroundStyle(.white)
                 Spacer()
                 Text(chartYearText)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.55))
                     .monospacedDigit()
             }
+            
+            VocabCardHairline()
             
             chartBody
                 .frame(height: 180)
             
             Text(LocalizedKey.reviewActivity)
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.white.opacity(0.4))
         }
+        .padding(16)
+        .vocabGlassCard(glow: .vocabBrand)
     }
     
     private var chartBody: some View {
@@ -479,16 +438,16 @@ struct ProgressTabView: View {
                     y: .value("Count", point.count)
                 )
                 .symbolSize(72)
-                .foregroundStyle(Color.vocabInk)
+                .foregroundStyle(.white)
                 .annotation(position: .top, spacing: 8) {
                     Text("\(point.count)")
                         .font(.caption.weight(.bold))
                         .fontDesign(.rounded)
                         .monospacedDigit()
-                        .foregroundStyle(Color.vocabCanvas)
+                        .foregroundStyle(Color(hex: "1A1A1A"))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(Capsule().fill(Color.vocabInk))
+                        .background(Capsule().fill(.white))
                 }
             }
         }
@@ -500,13 +459,13 @@ struct ProgressTabView: View {
                        let point = points.first(where: { $0.id == date }) {
                         Text(point.label)
                             .font(.caption2.weight(date == selectedId ? .semibold : .regular))
-                            .foregroundStyle(date == selectedId ? Color.vocabInk : Color.secondary)
+                            .foregroundStyle(date == selectedId ? .white : Color.white.opacity(0.45))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background {
                                 if date == selectedId {
                                     Capsule()
-                                        .strokeBorder(Color.vocabInk.opacity(0.35), lineWidth: 1)
+                                        .strokeBorder(Color.white.opacity(0.35), lineWidth: 1)
                                 }
                             }
                     }
@@ -553,6 +512,5 @@ struct ProgressTabView: View {
 
 #Preview {
     ProgressTabView(selectedTab: .constant(.progress))
-        .environmentObject(AuthenticationManager.shared)
         .modelContainer(for: [Word.self, WordSheet.self], inMemory: true)
 }

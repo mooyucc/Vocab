@@ -16,7 +16,9 @@ final class WordSheet: Identifiable {
     var sortOrder: Int = 0
     var isPinned: Bool = false
     var symbolName: String = "book.closed"
-    var colorName: String = "accent"
+    var colorName: String = "hubGold"
+    /// 创建时分配的颜色；改色后可恢复，创建后不再更新（空则由 normalize 补齐）
+    var originalColorName: String = ""
     /// 冗余计数：列表展示用，由 WordSheetService 维护，避免进词库时 N 次 fetchCount
     var wordCount: Int = 0
     var learnedCount: Int = 0
@@ -31,7 +33,8 @@ final class WordSheet: Identifiable {
         sortOrder: Int = 0,
         isPinned: Bool = false,
         symbolName: String = "book.closed",
-        colorName: String = "accent",
+        colorName: String = "hubGold",
+        originalColorName: String? = nil,
         wordCount: Int = 0,
         learnedCount: Int = 0
     ) {
@@ -42,6 +45,7 @@ final class WordSheet: Identifiable {
         self.isPinned = isPinned
         self.symbolName = symbolName
         self.colorName = colorName
+        self.originalColorName = originalColorName ?? colorName
         self.wordCount = wordCount
         self.learnedCount = learnedCount
     }

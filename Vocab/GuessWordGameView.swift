@@ -10,10 +10,11 @@ import SwiftData
 
 struct GuessWordGameView: View {
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizedString = LocalizedString.shared
     @Binding var isSessionActive: Bool
     @Binding var endSessionRequested: Bool
     @Binding var selectedTab: AppView
-    
+
     @Query private var words: [Word]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase

@@ -14,6 +14,7 @@ import UniformTypeIdentifiers
 struct DataSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizedString = LocalizedString.shared
     @Query private var words: [Word]
     @Query private var sheets: [WordSheet]
     @EnvironmentObject var authManager: AuthenticationManager
@@ -357,7 +358,16 @@ struct DataSettingsView: View {
                                         sheetMap[sheetKey] = existing
                                     } else {
                                         // 创建新的sheet
-                                        let newSheet = WordSheet(name: sheetName, createdAt: createdAt)
+                                        let importedExtras = sheetMap.values.filter { candidate in
+                                            !sheets.contains(where: { $0.id == candidate.id })
+                                        }
+                                        let newSheet = WordSheet(
+                                            name: sheetName,
+                                            createdAt: createdAt,
+                                            colorName: WordSheetAppearance.nextColorName(
+                                                for: sheets + Array(importedExtras)
+                                            )
+                                        )
                                         modelContext.insert(newSheet)
                                         sheetMap[sheetKey] = newSheet
                                         sheet = newSheet

@@ -112,6 +112,7 @@ private func transformedChinese(_ text: String, toTraditional: Bool) -> String {
 struct WordSupplementView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var localizedString = LocalizedString.shared
     @Query(sort: \Word.createdAt, order: .reverse) private var allWords: [Word]
     
     @State private var isRunning = false

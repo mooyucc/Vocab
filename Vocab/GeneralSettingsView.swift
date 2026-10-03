@@ -13,25 +13,6 @@ struct GeneralSettingsView: View {
     @ObservedObject private var localizedString = LocalizedString.shared
     @State private var showSupplementSheet = false
     
-    /// 获取系统级别的颜色方案（不受应用设置影响）
-    private var systemColorScheme: ColorScheme? {
-        settingsManager.getSystemColorScheme()
-    }
-    
-    /// 计算应该使用的颜色方案
-    /// 当模式为"系统"时，使用系统颜色方案以确保弹窗能立即更新
-    private var effectiveColorScheme: ColorScheme? {
-        switch settingsManager.appearanceMode {
-        case .system:
-            // 使用系统颜色方案，而不是 nil，以确保弹窗能立即更新
-            return systemColorScheme
-        case .dark:
-            return .dark
-        case .light:
-            return .light
-        }
-    }
-    
     var body: some View {
         Form {
             // 语言设置
@@ -62,21 +43,6 @@ struct GeneralSettingsView: View {
                 Text(LocalizedKey.targetLanguageDescription)
             }
             
-            // 外观模式设置
-            Section {
-                Picker(LocalizedKey.appearance.rawValue.localized, selection: $settingsManager.appearanceMode) {
-                    ForEach(AppearanceMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName)
-                            .tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-            } header: {
-                Text(LocalizedKey.appearance)
-            } footer: {
-                Text(LocalizedKey.appearanceDescription)
-            }
-            
             // 一键更新词根与近反义词
             Section {
                 Button {
@@ -93,7 +59,6 @@ struct GeneralSettingsView: View {
         .navigationTitle(LocalizedKey.general.rawValue.localized)
         .navigationBarTitleDisplayMode(.inline)
         .vocabFormCanvas()
-        .preferredColorScheme(effectiveColorScheme)
         .sheet(isPresented: $showSupplementSheet) {
             WordSupplementView()
         }

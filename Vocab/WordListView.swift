@@ -41,7 +41,10 @@ struct WordListView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            LibraryAtmosphereBackground()
+            VocabAtmosphereBackground(
+                accent: .vocabTeal,
+                secondaryAccent: .vocabBrand
+            )
             
             VStack(spacing: 0) {
                 header
@@ -60,9 +63,8 @@ struct WordListView: View {
                 addWordButton
             }
         }
-        .background(Color.vocabLibraryCanvas)
-        .toolbarBackground(Color.vocabLibraryCanvas, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
+        .dismissKeyboardOnTap()
+        .preferredColorScheme(.dark)
         .safeAreaInset(edge: .bottom) {
             if isSelectingWords && openedSheetSession == nil {
                 selectionBar
@@ -80,7 +82,9 @@ struct WordListView: View {
             )
         }
         .sheet(item: $selectedWord) { word in
-            wordDetailSheet(word)
+            WordDetailSheet(word: word) {
+                selectedWord = nil
+            }
         }
         .sheet(item: $editorSession) { session in
             WordSheetEditorView(sheet: session.sheet)
@@ -156,18 +160,30 @@ struct WordListView: View {
         .modifier(SelectionHapticsModifier(count: selectedWordsById.count))
         .onAppear {
             WordSheetService.ensureCountsUpToDate(in: modelContext)
+            WordSheetAppearance.normalizeColors(in: allSheets, context: modelContext)
         }
+    }
+    
+    private var headerTotalWordCount: Int {
+        allSheets.reduce(0) { $0 + $1.wordCount }
     }
     
     private var header: some View {
         VStack(spacing: 16) {
-            HStack(alignment: .center, spacing: 12) {
-                Text(LocalizedKey.myWordList)
-                    .font(.largeTitle)
-                    .fontWeight(.black)
-                    .fontDesign(.rounded)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(LocalizedKey.myWordList)
+                        .font(.title.weight(.bold))
+                        .fontDesign(.rounded)
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                    Text(LocalizedFormat.wordCount(headerTotalWordCount))
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
                 
                 if isSelectingWords {
                     Button(LocalizedKey.done.rawValue.localized) {
@@ -178,6 +194,7 @@ struct WordListView: View {
                     }
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
+                    .frame(height: 44)
                 } else {
                     Menu {
                         Button {
@@ -206,10 +223,13 @@ struct WordListView: View {
                         }
                     } label: {
                         Image(systemName: "square.grid.2x2.fill")
-                            .font(.body.weight(.semibold))
+                            .font(.system(size: 20, weight: .medium))
                             .foregroundStyle(.white)
                             .frame(width: 44, height: 44)
-                            .background(Color.vocabLibraryControl, in: Circle())
+                            .background(
+                                Circle()
+                                    .strokeBorder(Color.white.opacity(0.85), lineWidth: 1.5)
+                            )
                             .contentShape(Circle())
                     }
                     .accessibilityLabel(LocalizedKey.more.rawValue.localized)
@@ -245,8 +265,8 @@ struct WordListView: View {
             .background(Color.black.opacity(0.18), in: Capsule())
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
         .padding(.bottom, 16)
     }
     
@@ -328,14 +348,14 @@ struct WordListView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white.opacity(0.7))
                                 .padding(.horizontal, 4)
-                            ForEach(Array(group.sheets.enumerated()), id: \.element.id) { index, sheet in
-                                lazySheetSection(sheet, accentIndex: index)
+                            ForEach(group.sheets) { sheet in
+                                lazySheetSection(sheet)
                             }
                         }
                     }
                 } else {
-                    ForEach(Array(sortedSheets.enumerated()), id: \.element.id) { index, sheet in
-                        lazySheetSection(sheet, accentIndex: index)
+                    ForEach(sortedSheets) { sheet in
+                        lazySheetSection(sheet)
                     }
                 }
             }
@@ -361,14 +381,14 @@ struct WordListView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white.opacity(0.7))
                                 .padding(.horizontal, 4)
-                            ForEach(Array(group.sheets.enumerated()), id: \.element.id) { index, sheet in
-                                querySheetSection(sheet, snapshot: snapshot, accentIndex: index)
+                            ForEach(group.sheets) { sheet in
+                                querySheetSection(sheet, snapshot: snapshot)
                             }
                         }
                     }
                 } else {
-                    ForEach(Array(snapshot.visibleSheets.enumerated()), id: \.element.id) { index, sheet in
-                        querySheetSection(sheet, snapshot: snapshot, accentIndex: index)
+                    ForEach(snapshot.visibleSheets) { sheet in
+                        querySheetSection(sheet, snapshot: snapshot)
                     }
                 }
             }
@@ -380,12 +400,11 @@ struct WordListView: View {
         .dismissKeyboardOnTap()
     }
     
-    private func lazySheetSection(_ sheet: WordSheet, accentIndex: Int) -> some View {
+    private func lazySheetSection(_ sheet: WordSheet) -> some View {
         SheetSection(
             sheet: sheet,
             wordCount: sheet.wordCount,
             learnedCount: sheet.learnedCount,
-            accentIndex: accentIndex,
             onOpen: {
                 openedSheetSession = OpenedSheetSession(sheet: sheet)
             },
@@ -406,13 +425,12 @@ struct WordListView: View {
         )
     }
     
-    private func querySheetSection(_ sheet: WordSheet, snapshot: WordListSnapshot, accentIndex: Int) -> some View {
+    private func querySheetSection(_ sheet: WordSheet, snapshot: WordListSnapshot) -> some View {
         let sectionWords = snapshot.words(for: sheet)
         return SheetSection(
             sheet: sheet,
             wordCount: sectionWords.count,
             learnedCount: sectionWords.filter(\.learned).count,
-            accentIndex: accentIndex,
             onOpen: {
                 openedSheetSession = OpenedSheetSession(sheet: sheet, words: sectionWords)
             },
@@ -493,23 +511,6 @@ struct WordListView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(.bar)
-    }
-    
-    private func wordDetailSheet(_ word: Word) -> some View {
-        NavigationStack {
-            FlashCardView(word: word, onResult: { _ in
-                selectedWord = nil
-            }, showActionButtons: false)
-            .padding(.horizontal, 20)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(LocalizedKey.done.rawValue.localized) {
-                        selectedWord = nil
-                    }
-                }
-            }
-        }
     }
     
     private func toggleWordSelection(_ word: Word) {
@@ -665,7 +666,6 @@ struct SheetSection: View {
     let sheet: WordSheet
     var wordCount: Int? = nil
     var learnedCount: Int? = nil
-    var accentIndex: Int = 0
     let onOpen: () -> Void
     var onPin: () -> Void = {}
     var onEdit: () -> Void = {}
@@ -673,25 +673,13 @@ struct SheetSection: View {
     var onDeleteSheet: () -> Void = {}
     
     private var accent: (fill: Color, foreground: Color) {
-        let name = sheet.colorName.isEmpty ? "accent" : sheet.colorName
-        if name == "accent" {
-            let palette: [(Color, Color)] = [
-                (Color.vocabBrand, .white),
-                (Color.vocabSurface, Color.vocabInk),
-                (Color.vocabGold, Color.vocabInk)
-            ]
-            return palette[accentIndex % palette.count]
-        }
-        return (sheet.tintColor, leftForeground(for: name))
-    }
-    
-    private func leftForeground(for colorName: String) -> Color {
-        switch colorName {
-        case "orange", "pink", "gray", "yellow":
-            return Color.vocabInk
-        default:
-            return .white
-        }
+        let name = WordSheetAppearance.isKnownColorName(sheet.colorName)
+            ? sheet.colorName
+            : WordSheetAppearance.colorNames[0]
+        let foreground: Color = WordSheetAppearance.prefersDarkForeground(name)
+            ? Color(hex: "1A1A1A")
+            : .white
+        return (WordSheetAppearance.color(named: name), foreground)
     }
     
     private var masteryProgress: CGFloat {
@@ -756,10 +744,6 @@ struct SheetSection: View {
             let fillWidth = max(labelMin, trackWidth - badgeSize)
             
             ZStack(alignment: .leading) {
-                Color.vocabLibraryStripe
-                DiagonalStripePattern()
-                    .opacity(0.22)
-                
                 HStack(spacing: 0) {
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: VocabTheme.Radius.sheet, style: .continuous)
@@ -819,7 +803,7 @@ struct SheetSection: View {
             }
         }
         .frame(height: 88)
-        .clipShape(RoundedRectangle(cornerRadius: VocabTheme.Radius.hero, style: .continuous))
+        .vocabGlassCard(cornerRadius: VocabTheme.Radius.hero, glow: accent.fill)
     }
     
     @ViewBuilder
@@ -829,14 +813,14 @@ struct SheetSection: View {
                 .fill(Color.vocabSurface)
                 .overlay {
                     Circle()
-                        .strokeBorder(Color.vocabLibraryStripe, lineWidth: 2.5)
+                        .strokeBorder(accent.fill, lineWidth: 2.5)
                 }
             if let masteryPercent {
                 Text("\(masteryPercent)%")
                     .font(.caption2.weight(.bold))
                     .fontDesign(.rounded)
                     .monospacedDigit()
-                    .foregroundStyle(Color.vocabInk)
+                    .foregroundStyle(accent.fill)
                     .minimumScaleFactor(0.65)
                     .lineLimit(1)
             } else {
@@ -860,37 +844,6 @@ struct SheetSection: View {
             parts.append("\(masteryPercent)%")
         }
         return parts.joined(separator: ", ")
-    }
-}
-
-private struct LibraryAtmosphereBackground: View {
-    var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                Color.vocabLibraryCanvas
-                
-                Ellipse()
-                    .fill(Color.vocabLibraryBlob.opacity(0.55))
-                    .frame(width: geo.size.width * 1.15, height: geo.size.width * 0.72)
-                    .blur(radius: 2)
-                    .offset(x: -geo.size.width * 0.22, y: -geo.size.height * 0.08)
-                
-                Ellipse()
-                    .fill(Color.vocabLibraryBlob.opacity(0.4))
-                    .frame(width: geo.size.width * 0.95, height: geo.size.width * 0.7)
-                    .blur(radius: 4)
-                    .offset(x: geo.size.width * 0.35, y: geo.size.height * 0.18)
-                
-                Ellipse()
-                    .fill(Color.black.opacity(0.12))
-                    .frame(width: geo.size.width * 0.8, height: geo.size.width * 0.55)
-                    .blur(radius: 8)
-                    .offset(x: geo.size.width * 0.1, y: geo.size.height * 0.55)
-            }
-            .frame(width: geo.size.width, height: geo.size.height)
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
     }
 }
 
@@ -925,7 +878,10 @@ private struct SheetWordsBrowserView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LibraryAtmosphereBackground()
+                VocabAtmosphereBackground(
+                    accent: .vocabTeal,
+                    secondaryAccent: .vocabBrand
+                )
                 
                 Group {
                     if words.isEmpty {
@@ -958,11 +914,10 @@ private struct SheetWordsBrowserView: View {
                     }
                 }
             }
-            .background(Color.vocabLibraryCanvas)
+            .preferredColorScheme(.dark)
             .navigationTitle(sheet.localizedDisplayName)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.vocabLibraryCanvas, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -980,21 +935,10 @@ private struct SheetWordsBrowserView: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
-        .presentationBackground(Color.vocabLibraryCanvas)
+        .presentationBackground(.black)
         .sheet(item: $selectedWord) { word in
-            NavigationStack {
-                FlashCardView(word: word, onResult: { _ in
-                    selectedWord = nil
-                }, showActionButtons: false)
-                .padding(.horizontal, 20)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(LocalizedKey.done.rawValue.localized) {
-                            selectedWord = nil
-                        }
-                    }
-                }
+            WordDetailSheet(word: word) {
+                selectedWord = nil
             }
         }
         .sheet(isPresented: $showMovePicker) {
@@ -1094,6 +1038,48 @@ private struct SheetWordsBrowserView: View {
         selectedWordsById.removeAll()
         isSelecting = false
         VocabHaptics.notify(.warning)
+    }
+}
+
+/// 单字库单词详情：导航栏提供编辑入口
+private struct WordDetailSheet: View {
+    let word: Word
+    let onDone: () -> Void
+    
+    @State private var showEditWord = false
+    @ObservedObject private var localizedString = LocalizedString.shared
+    
+    var body: some View {
+        NavigationStack {
+            FlashCardView(
+                word: word,
+                onResult: { _ in
+                    onDone()
+                },
+                showActionButtons: false,
+                showsCardEditButton: false
+            )
+            .padding(.horizontal, 20)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showEditWord = true
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .accessibilityLabel(LocalizedKey.editWordTitle.rawValue.localized)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(LocalizedKey.done.rawValue.localized) {
+                        onDone()
+                    }
+                }
+            }
+            .sheet(isPresented: $showEditWord) {
+                EditWordView(word: word)
+            }
+        }
     }
 }
 
